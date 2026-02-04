@@ -736,16 +736,16 @@ export default function CheckoutPage() {
                 <div className="flex justify-center">
                   <div className="p-4 bg-white rounded-lg">
                     <img 
-                      src={`https://img.vietqr.io/image/VCB-1234567890-compact2.jpg?amount=${deposit}&addInfo=ORCHID%20DEPOSIT&accountName=VUON%20LAN%20HUNG%20CUONG`} 
-                      alt="VietQR Payment" 
-                      className="w-48 h-48 object-contain" 
+                      src="/assets/vietcombank-qr.png" 
+                      alt="Vietcombank QR Payment" 
+                      className="w-64 h-auto object-contain" 
                     />
                   </div>
                 </div>
                 <div className="text-center text-sm text-muted-foreground">
                   <p>{language === "vi" ? "Số tiền cọc:" : "Deposit amount:"} <strong>{formatCurrency(deposit, language)}</strong></p>
-                  <p>Vietcombank (VCB) - 1234567890</p>
-                  <p>VUON LAN HUNG CUONG</p>
+                  <p>VIETCOMBANK - 9983270995</p>
+                  <p>LE THI THANH TU</p>
                 </div>
                 <Separator />
                 <div className="space-y-3">

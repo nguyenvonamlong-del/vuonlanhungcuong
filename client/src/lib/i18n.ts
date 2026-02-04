@@ -23,7 +23,7 @@ export const translations = {
   landing: {
     heroTitle: { 
       vi: 'Vườn Lan Hùng Cường', 
-      en: 'Orchid Garden' 
+      en: 'Hùng Cường Orchid Garden' 
     },
     heroSubtitle: { 
       vi: 'Chuyên cung cấp lan hồ điệp cao cấp', 

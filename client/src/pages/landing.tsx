@@ -227,7 +227,7 @@ export default function LandingPage() {
                   <h3 className="font-semibold">
                     {language === "vi" ? "Điện thoại" : "Phone"}
                   </h3>
-                  <p className="text-muted-foreground text-sm">0909 123 456</p>
+                  <p className="text-muted-foreground text-sm">0983 270 995</p>
                 </CardContent>
               </Card>
               <Card className="hover-elevate">
@@ -236,7 +236,7 @@ export default function LandingPage() {
                     <Mail className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="font-semibold">Email</h3>
-                  <p className="text-muted-foreground text-sm">info@orchidgarden.vn</p>
+                  <p className="text-muted-foreground text-sm">Thanhtusky147@gmail.com</p>
                 </CardContent>
               </Card>
               <Card className="hover-elevate">
@@ -248,9 +248,7 @@ export default function LandingPage() {
                     {language === "vi" ? "Địa chỉ" : "Address"}
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    {language === "vi"
-                      ? "123 Đường ABC, Quận 1, TP.HCM"
-                      : "123 ABC Street, District 1, HCMC"}
+                    Đội 10, Xích Đằng, phường Lam Sơn, TP. Hưng Yên, tỉnh Hưng Yên
                   </p>
                 </CardContent>
               </Card>
