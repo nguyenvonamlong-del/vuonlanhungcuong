@@ -1063,4 +1063,113 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ error: "Failed to fetch activities" });
     }
   });
+
+  // ==================== PRIORITY TYPES ====================
+  app.get("/api/priority-types", async (req, res) => {
+    try {
+      const items = await storage.getPriorityTypes();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch priority types" });
+    }
+  });
+
+  app.post("/api/priority-types", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const item = await storage.createPriorityType(req.body);
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create priority type" });
+    }
+  });
+
+  app.put("/api/priority-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const item = await storage.updatePriorityType(req.params.id, req.body);
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update priority type" });
+    }
+  });
+
+  app.delete("/api/priority-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.deletePriorityType(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete priority type" });
+    }
+  });
+
+  // ==================== NOTIFICATION CHANNELS ====================
+  app.get("/api/notification-channels", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const items = await storage.getNotificationChannels();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notification channels" });
+    }
+  });
+
+  app.post("/api/notification-channels", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const item = await storage.createNotificationChannel(req.body);
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create notification channel" });
+    }
+  });
+
+  app.put("/api/notification-channels/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const item = await storage.updateNotificationChannel(req.params.id, req.body);
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update notification channel" });
+    }
+  });
+
+  app.delete("/api/notification-channels/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.deleteNotificationChannel(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete notification channel" });
+    }
+  });
+
+  // Update order priority
+  app.patch("/api/orders/:id/priority", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { priorityId } = req.body;
+      const order = await storage.updateOrder(req.params.id, { priorityId });
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update order priority" });
+    }
+  });
 }

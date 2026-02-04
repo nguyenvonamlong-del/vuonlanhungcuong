@@ -20,14 +20,14 @@ import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CatalogItem, PremadePot } from "@shared/schema";
+import type { CatalogItem, PremadePot, PotType, DecorationType } from "@shared/schema";
 
-type InventoryTab = "orchids" | "premade" | "alerts";
+type InventoryTab = "orchids" | "premade" | "pots" | "decorations" | "general" | "alerts";
 
 interface InventoryItem {
   id: string;
   name: string;
-  type: "orchid" | "premade";
+  type: "orchid" | "premade" | "pot" | "decoration";
   stock: number;
   minStock: number;
   maxStock: number;
@@ -56,6 +56,14 @@ export default function InventoryPage() {
 
   const { data: premadePots = [], isLoading: loadingPremade } = useQuery<PremadePot[]>({
     queryKey: ["/api/premade-pots"],
+  });
+
+  const { data: potTypes = [], isLoading: loadingPots } = useQuery<PotType[]>({
+    queryKey: ["/api/pot-types"],
+  });
+
+  const { data: decorationTypes = [], isLoading: loadingDecorations } = useQuery<DecorationType[]>({
+    queryKey: ["/api/decoration-types"],
   });
 
   const updateStockMutation = useMutation({
@@ -109,6 +117,30 @@ export default function InventoryPage() {
     imageUrl: pot.images?.[0],
   }));
 
+  const potsInventory: InventoryItem[] = potTypes.map((pot) => ({
+    id: pot.id,
+    name: language === "vi" ? pot.nameVi : pot.nameEn,
+    type: "pot" as const,
+    stock: 0, // Pot types don't have stock tracking by default
+    minStock: 0,
+    maxStock: 100,
+    price: pot.price || "0",
+    status: pot.status,
+    imageUrl: pot.imageUrl,
+  }));
+
+  const decorationsInventory: InventoryItem[] = decorationTypes.map((dec) => ({
+    id: dec.id,
+    name: language === "vi" ? dec.nameVi : dec.nameEn,
+    type: "decoration" as const,
+    stock: 0, // Decoration types don't have stock tracking by default
+    minStock: 0,
+    maxStock: 100,
+    price: dec.price || "0",
+    status: dec.status,
+    imageUrl: dec.imageUrl,
+  }));
+
   const allInventory = [...orchidInventory, ...premadeInventory];
 
   const lowStockItems = allInventory.filter((item) => item.stock <= LOW_STOCK_THRESHOLD && item.status === "ACTIVE");
@@ -119,6 +151,14 @@ export default function InventoryPage() {
   );
 
   const filteredPremade = premadeInventory.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredPots = potsInventory.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredDecorations = decorationsInventory.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -144,6 +184,8 @@ export default function InventoryPage() {
   };
 
   const openAdjustDialog = (item: InventoryItem) => {
+    // Only allow adjustment for orchid and premade items
+    if (item.type !== "orchid" && item.type !== "premade") return;
     setAdjustingItem(item);
     setAdjustmentAmount(0);
     setAdjustmentReason("");
@@ -152,9 +194,11 @@ export default function InventoryPage() {
 
   const handleAdjustStock = () => {
     if (!adjustingItem) return;
+    // Guard against non-adjustable types
+    if (adjustingItem.type !== "orchid" && adjustingItem.type !== "premade") return;
     const newStock = Math.max(0, adjustingItem.stock + adjustmentAmount);
     updateStockMutation.mutate({
-      type: adjustingItem.type,
+      type: adjustingItem.type as "orchid" | "premade",
       id: adjustingItem.id,
       stock: newStock,
     });
@@ -213,7 +257,10 @@ export default function InventoryPage() {
                         <div>
                           <p className="font-medium">{item.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {item.type === "orchid" ? (language === "vi" ? "Loại lan" : "Orchid") : (language === "vi" ? "Chậu sẵn" : "Premade")}
+                            {item.type === "orchid" ? (language === "vi" ? "Loại lan" : "Orchid") : 
+                             item.type === "premade" ? (language === "vi" ? "Chậu sẵn" : "Premade") :
+                             item.type === "pot" ? (language === "vi" ? "Loại chậu" : "Pot Type") :
+                             (language === "vi" ? "Trang trí" : "Decoration")}
                           </p>
                         </div>
                       </div>
@@ -236,14 +283,20 @@ export default function InventoryPage() {
                       {formatCurrency(item.stock * parseFloat(item.price), language)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAdjustDialog(item)}
-                        data-testid={`button-adjust-${item.id}`}
-                      >
-                        {language === "vi" ? "Điều chỉnh" : "Adjust"}
-                      </Button>
+                      {(item.type === "orchid" || item.type === "premade") ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAdjustDialog(item)}
+                          data-testid={`button-adjust-${item.id}`}
+                        >
+                          {language === "vi" ? "Điều chỉnh" : "Adjust"}
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {language === "vi" ? "Không theo dõi" : "Not tracked"}
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -342,7 +395,7 @@ export default function InventoryPage() {
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as InventoryTab)}>
-              <TabsList>
+              <TabsList className="flex-wrap">
                 <TabsTrigger value="orchids" className="flex items-center gap-2">
                   <Flower2 className="h-4 w-4" />
                   {language === "vi" ? "Loại Lan" : "Orchids"}
@@ -350,6 +403,18 @@ export default function InventoryPage() {
                 <TabsTrigger value="premade" className="flex items-center gap-2">
                   <Package className="h-4 w-4" />
                   {language === "vi" ? "Chậu Sẵn" : "Premade Pots"}
+                </TabsTrigger>
+                <TabsTrigger value="pots" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  {language === "vi" ? "Loại Chậu" : "Pots"}
+                </TabsTrigger>
+                <TabsTrigger value="decorations" className="flex items-center gap-2">
+                  <Flower2 className="h-4 w-4" />
+                  {language === "vi" ? "Trang Trí" : "Decorations"}
+                </TabsTrigger>
+                <TabsTrigger value="general" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  {language === "vi" ? "Chung" : "General"}
                 </TabsTrigger>
                 <TabsTrigger value="alerts" className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
@@ -366,6 +431,27 @@ export default function InventoryPage() {
 
               <TabsContent value="premade" className="mt-4">
                 {renderInventoryTable(filteredPremade, loadingPremade)}
+              </TabsContent>
+
+              <TabsContent value="pots" className="mt-4">
+                {renderInventoryTable(filteredPots, loadingPots)}
+              </TabsContent>
+
+              <TabsContent value="decorations" className="mt-4">
+                {renderInventoryTable(filteredDecorations, loadingDecorations)}
+              </TabsContent>
+
+              <TabsContent value="general" className="mt-4">
+                <Card>
+                  <CardContent className="py-12">
+                    <div className="text-center">
+                      <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">
+                        {language === "vi" ? "Chức năng quản lý hàng tổng quát đang được phát triển" : "General inventory management coming soon"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="alerts" className="mt-4">

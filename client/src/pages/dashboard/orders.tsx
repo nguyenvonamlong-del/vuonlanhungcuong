@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, Eye, UserCheck, CreditCard, XCircle, Flower2, ChevronDown, MessageCircle } from "lucide-react";
+import { Search, Eye, UserCheck, CreditCard, XCircle, Flower2, ChevronDown, MessageCircle, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -21,7 +22,7 @@ import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Order, Technician } from "@shared/schema";
+import type { Order, Technician, PriorityType } from "@shared/schema";
 
 const statusOptions = ["PENDING", "CONFIRMED", "PREPARING", "READY", "SHIPPING", "DELIVERED", "CANCELLED"];
 
@@ -44,6 +45,14 @@ export default function OrdersPage() {
 
   const { data: technicians = [] } = useQuery<Technician[]>({
     queryKey: ["/api/technicians/available"],
+  });
+
+  const { data: allTechnicians = [] } = useQuery<Technician[]>({
+    queryKey: ["/api/technicians"],
+  });
+
+  const { data: priorityTypes = [] } = useQuery<PriorityType[]>({
+    queryKey: ["/api/priority-types"],
   });
 
   const updateStatusMutation = useMutation({
@@ -98,6 +107,20 @@ export default function OrdersPage() {
     },
   });
 
+  const updatePriorityMutation = useMutation({
+    mutationFn: async ({ id, priorityId }: { id: string; priorityId: string | null }) => {
+      const response = await apiRequest("PATCH", `/api/orders/${id}/priority`, { priorityId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({
+        title: t("common.success", language),
+        description: language === "vi" ? "Đã cập nhật ưu tiên" : "Priority updated",
+      });
+    },
+  });
+
   const cancelOrderMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const response = await apiRequest("PATCH", `/api/orders/${id}/cancel`, { reason });
@@ -124,6 +147,22 @@ export default function OrdersPage() {
   });
 
   const canUpdateStatus = user?.role === "ADMIN" || user?.role === "MANAGER" || user?.role === "EMPLOYEE";
+
+  const getTechnicianName = (technicianId: string | null): string => {
+    if (!technicianId) return "-";
+    const tech = allTechnicians.find(t => t.id === technicianId);
+    return tech?.fullName || "-";
+  };
+
+  const getPriorityInfo = (priorityId: string | null): { name: string; color: string } | null => {
+    if (!priorityId) return null;
+    const priority = priorityTypes.find(p => p.id === priorityId);
+    if (!priority) return null;
+    return {
+      name: language === "vi" ? priority.nameVi : priority.nameEn,
+      color: priority.color
+    };
+  };
 
   const style = {
     "--sidebar-width": "16rem",
@@ -205,6 +244,8 @@ export default function OrdersPage() {
                           <TableHead>{t("orders.customer", language)}</TableHead>
                           <TableHead className="text-right">{t("orders.total", language)}</TableHead>
                           <TableHead>{t("orders.status", language)}</TableHead>
+                          <TableHead>{language === "vi" ? "Kỹ thuật viên" : "Technician"}</TableHead>
+                          <TableHead>{language === "vi" ? "Ưu tiên" : "Priority"}</TableHead>
                           <TableHead>{t("orders.date", language)}</TableHead>
                           <TableHead className="text-right">{t("orders.actions", language)}</TableHead>
                         </TableRow>
@@ -224,6 +265,23 @@ export default function OrdersPage() {
                             </TableCell>
                             <TableCell>
                               <StatusBadge status={order.status} />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {getTechnicianName(order.technicianId)}
+                            </TableCell>
+                            <TableCell>
+                              {(() => {
+                                const priority = getPriorityInfo((order as any).priorityId);
+                                if (!priority) return <span className="text-muted-foreground">-</span>;
+                                return (
+                                  <Badge 
+                                    variant="outline" 
+                                    style={{ borderColor: priority.color, color: priority.color }}
+                                  >
+                                    {priority.name}
+                                  </Badge>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {new Date(order.createdAt!).toLocaleDateString(language === "vi" ? "vi-VN" : "en-US")}
@@ -273,6 +331,31 @@ export default function OrdersPage() {
                                           {t("orders.markPaid", language)}
                                         </DropdownMenuItem>
                                       )}
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                          <Flag className="h-4 w-4 mr-2" />
+                                          {language === "vi" ? "Đặt ưu tiên" : "Set Priority"}
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent>
+                                          <DropdownMenuItem
+                                            onClick={() => updatePriorityMutation.mutate({ id: order.id, priorityId: null })}
+                                          >
+                                            {language === "vi" ? "Không có" : "None"}
+                                          </DropdownMenuItem>
+                                          {priorityTypes.map((pt) => (
+                                            <DropdownMenuItem
+                                              key={pt.id}
+                                              onClick={() => updatePriorityMutation.mutate({ id: order.id, priorityId: pt.id })}
+                                            >
+                                              <span 
+                                                className="w-3 h-3 rounded-full mr-2" 
+                                                style={{ backgroundColor: pt.color }}
+                                              />
+                                              {language === "vi" ? pt.nameVi : pt.nameEn}
+                                            </DropdownMenuItem>
+                                          ))}
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuSub>
                                       <DropdownMenuItem
                                         className="text-destructive"
                                         onClick={() => {

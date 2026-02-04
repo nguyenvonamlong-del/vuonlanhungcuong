@@ -16,6 +16,8 @@ import {
   suppliers,
   purchaseOrders,
   notifications,
+  priorityTypes,
+  notificationChannels,
   type User,
   type InsertUser,
   type CatalogItem,
@@ -46,6 +48,10 @@ import {
   type InsertPurchaseOrder,
   type Notification,
   type InsertNotification,
+  type PriorityType,
+  type InsertPriorityType,
+  type NotificationChannel,
+  type InsertNotificationChannel,
 } from "@shared/schema";
 import { v4 as uuidv4 } from "uuid";
 
@@ -156,6 +162,20 @@ export interface IStorage {
   updateNotification(id: string, notification: Partial<InsertNotification>): Promise<Notification | undefined>;
   markNotificationRead(id: string): Promise<Notification | undefined>;
   deleteNotification(id: string): Promise<void>;
+  
+  // Priority Types
+  getPriorityTypes(): Promise<PriorityType[]>;
+  getPriorityTypeById(id: string): Promise<PriorityType | undefined>;
+  createPriorityType(priority: InsertPriorityType): Promise<PriorityType>;
+  updatePriorityType(id: string, priority: Partial<InsertPriorityType>): Promise<PriorityType | undefined>;
+  deletePriorityType(id: string): Promise<void>;
+  
+  // Notification Channels
+  getNotificationChannels(): Promise<NotificationChannel[]>;
+  getNotificationChannelById(id: string): Promise<NotificationChannel | undefined>;
+  createNotificationChannel(channel: InsertNotificationChannel): Promise<NotificationChannel>;
+  updateNotificationChannel(id: string, channel: Partial<InsertNotificationChannel>): Promise<NotificationChannel | undefined>;
+  deleteNotificationChannel(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -616,6 +636,54 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNotification(id: string): Promise<void> {
     await db.delete(notifications).where(eq(notifications.id, id));
+  }
+
+  // Priority Types
+  async getPriorityTypes(): Promise<PriorityType[]> {
+    return db.select().from(priorityTypes).orderBy(priorityTypes.level);
+  }
+
+  async getPriorityTypeById(id: string): Promise<PriorityType | undefined> {
+    const [priority] = await db.select().from(priorityTypes).where(eq(priorityTypes.id, id));
+    return priority;
+  }
+
+  async createPriorityType(priority: InsertPriorityType): Promise<PriorityType> {
+    const [created] = await db.insert(priorityTypes).values({ ...priority, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updatePriorityType(id: string, priority: Partial<InsertPriorityType>): Promise<PriorityType | undefined> {
+    const [updated] = await db.update(priorityTypes).set(priority).where(eq(priorityTypes.id, id)).returning();
+    return updated;
+  }
+
+  async deletePriorityType(id: string): Promise<void> {
+    await db.delete(priorityTypes).where(eq(priorityTypes.id, id));
+  }
+
+  // Notification Channels
+  async getNotificationChannels(): Promise<NotificationChannel[]> {
+    return db.select().from(notificationChannels).orderBy(notificationChannels.createdAt);
+  }
+
+  async getNotificationChannelById(id: string): Promise<NotificationChannel | undefined> {
+    const [channel] = await db.select().from(notificationChannels).where(eq(notificationChannels.id, id));
+    return channel;
+  }
+
+  async createNotificationChannel(channel: InsertNotificationChannel): Promise<NotificationChannel> {
+    const [created] = await db.insert(notificationChannels).values({ ...channel, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateNotificationChannel(id: string, channel: Partial<InsertNotificationChannel>): Promise<NotificationChannel | undefined> {
+    const [updated] = await db.update(notificationChannels).set(channel).where(eq(notificationChannels.id, id)).returning();
+    return updated;
+  }
+
+  async deleteNotificationChannel(id: string): Promise<void> {
+    await db.delete(notificationChannels).where(eq(notificationChannels.id, id));
   }
 }
 

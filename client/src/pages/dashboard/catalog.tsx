@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard, Flag } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,9 +21,9 @@ import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CatalogItem, InsertCatalogItem, PotType, DecorationType, ShippingType, PaymentType } from "@shared/schema";
+import type { CatalogItem, InsertCatalogItem, PotType, DecorationType, ShippingType, PaymentType, PriorityType, Supplier } from "@shared/schema";
 
-type CatalogTab = "orchid" | "pot" | "decoration" | "shipping" | "payment";
+type CatalogTab = "orchid" | "pot" | "decoration" | "shipping" | "payment" | "priority";
 
 const initialOrchidForm: InsertCatalogItem = {
   speciesNameVi: "",
@@ -55,6 +55,8 @@ interface GenericFormData {
   accountName?: string;
   qrCodeUrl?: string;
   instructions?: string;
+  level?: number;
+  color?: string;
 }
 
 const initialGenericForm: GenericFormData = {
@@ -73,6 +75,8 @@ const initialGenericForm: GenericFormData = {
   accountName: "",
   qrCodeUrl: "",
   instructions: "",
+  level: 1,
+  color: "#808080",
 };
 
 export default function CatalogPage() {
@@ -113,6 +117,14 @@ export default function CatalogPage() {
 
   const { data: paymentTypes = [], isLoading: loadingPayments } = useQuery<PaymentType[]>({
     queryKey: ["/api/payment-types"],
+  });
+
+  const { data: priorityTypes = [], isLoading: loadingPriorities } = useQuery<PriorityType[]>({
+    queryKey: ["/api/priority-types"],
+  });
+
+  const { data: suppliers = [] } = useQuery<Supplier[]>({
+    queryKey: ["/api/suppliers"],
   });
 
   const createOrchidMutation = useMutation({
@@ -170,6 +182,7 @@ export default function CatalogPage() {
       case "decoration": return "/api/decoration-types";
       case "shipping": return "/api/shipping";
       case "payment": return "/api/payment-types";
+      case "priority": return "/api/priority-types";
       default: return "";
     }
   };
@@ -308,6 +321,8 @@ export default function CatalogPage() {
       accountName: item.accountName || "",
       qrCodeUrl: item.qrCodeUrl || "",
       instructions: item.instructions || "",
+      level: item.level || 1,
+      color: item.color || "#808080",
     });
     setGenericDialogOpen(true);
   };
@@ -350,6 +365,15 @@ export default function CatalogPage() {
         instructions: genericForm.instructions,
         status: genericForm.status,
       };
+    } else if (genericDialogType === "priority") {
+      data = {
+        nameVi: genericForm.nameVi,
+        nameEn: genericForm.nameEn,
+        descriptionVi: genericForm.descriptionVi,
+        descriptionEn: genericForm.descriptionEn,
+        level: genericForm.level,
+        color: genericForm.color,
+      };
     }
     
     if (editingGeneric) {
@@ -366,6 +390,7 @@ export default function CatalogPage() {
       case "decoration": return language === "vi" ? "Trang Trí" : "Decorations";
       case "shipping": return language === "vi" ? "Vận Chuyển" : "Shipping";
       case "payment": return language === "vi" ? "Thanh Toán" : "Payment";
+      case "priority": return language === "vi" ? "Độ Ưu Tiên" : "Priorities";
     }
   };
 
@@ -376,6 +401,7 @@ export default function CatalogPage() {
       case "decoration": return language === "vi" ? "Thêm Trang Trí" : "Add Decoration";
       case "shipping": return language === "vi" ? "Thêm Phí Ship" : "Add Shipping";
       case "payment": return language === "vi" ? "Thêm Phương Thức" : "Add Payment Method";
+      case "priority": return language === "vi" ? "Thêm Độ Ưu Tiên" : "Add Priority Level";
     }
   };
 
@@ -383,6 +409,77 @@ export default function CatalogPage() {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
+
+  const renderPriorityTable = () => (
+    <Card>
+      <CardContent className="p-0">
+        {loadingPriorities ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : priorityTypes.length === 0 ? (
+          <div className="text-center py-12">
+            <Flag className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">{language === "vi" ? "Chưa có dữ liệu" : "No priority levels found"}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
+                  <TableHead>{language === "vi" ? "Cấp độ" : "Level"}</TableHead>
+                  <TableHead>{language === "vi" ? "Màu sắc" : "Color"}</TableHead>
+                  <TableHead>{language === "vi" ? "Mô tả" : "Description"}</TableHead>
+                  <TableHead className="text-right">{t("catalog.actions", language)}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {priorityTypes.sort((a, b) => a.level - b.level).map((item) => (
+                  <TableRow key={item.id} data-testid={`row-priority-${item.id}`}>
+                    <TableCell className="font-medium">
+                      {language === "vi" ? item.nameVi : item.nameEn}
+                    </TableCell>
+                    <TableCell>{item.level}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-6 h-6 rounded border" 
+                          style={{ backgroundColor: item.color || "#808080" }}
+                        />
+                        <span className="text-sm text-muted-foreground">{item.color}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {language === "vi" ? item.descriptionVi : item.descriptionEn}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openGenericEdit("priority", item)} data-testid={`button-edit-priority-${item.id}`}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => { setDeletingGeneric({ ...item, type: "priority" }); setDeleteGenericDialogOpen(true); }}
+                          data-testid={`button-delete-priority-${item.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   const renderOrchidTable = () => (
     <Card>
@@ -613,6 +710,10 @@ export default function CatalogPage() {
                     <CreditCard className="h-4 w-4" />
                     {getTabLabel("payment")}
                   </TabsTrigger>
+                  <TabsTrigger value="priority" className="gap-2" data-testid="tab-priority">
+                    <Flag className="h-4 w-4" />
+                    {getTabLabel("priority")}
+                  </TabsTrigger>
                 </TabsList>
                 <Button
                   onClick={() => activeTab === "orchid" ? openOrchidCreate() : openGenericCreate(activeTab)}
@@ -656,6 +757,10 @@ export default function CatalogPage() {
 
               <TabsContent value="payment" className="mt-4">
                 {renderGenericTable(paymentTypes, loadingPayments, "payment")}
+              </TabsContent>
+
+              <TabsContent value="priority" className="mt-4">
+                {renderPriorityTable()}
               </TabsContent>
             </Tabs>
           </main>
@@ -884,18 +989,54 @@ export default function CatalogPage() {
               </>
             )}
 
-            <div className="space-y-2">
-              <Label>{t("catalog.status", language)}</Label>
-              <Select value={genericForm.status} onValueChange={(v) => setGenericForm({ ...genericForm, status: v })}>
-                <SelectTrigger data-testid="select-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">{t("catalog.active", language)}</SelectItem>
-                  <SelectItem value="INACTIVE">{t("catalog.inactive", language)}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {genericDialogType === "priority" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Cấp độ" : "Level"}</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={genericForm.level}
+                    onChange={(e) => setGenericForm({ ...genericForm, level: parseInt(e.target.value) || 1 })}
+                    required
+                    data-testid="input-level"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Màu sắc" : "Color"}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={genericForm.color}
+                      onChange={(e) => setGenericForm({ ...genericForm, color: e.target.value })}
+                      className="w-14 h-9 p-1"
+                      data-testid="input-color-picker"
+                    />
+                    <Input
+                      value={genericForm.color}
+                      onChange={(e) => setGenericForm({ ...genericForm, color: e.target.value })}
+                      placeholder="#808080"
+                      data-testid="input-color"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {genericDialogType !== "priority" && (
+              <div className="space-y-2">
+                <Label>{t("catalog.status", language)}</Label>
+                <Select value={genericForm.status} onValueChange={(v) => setGenericForm({ ...genericForm, status: v })}>
+                  <SelectTrigger data-testid="select-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">{t("catalog.active", language)}</SelectItem>
+                    <SelectItem value="INACTIVE">{t("catalog.inactive", language)}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setGenericDialogOpen(false)}>

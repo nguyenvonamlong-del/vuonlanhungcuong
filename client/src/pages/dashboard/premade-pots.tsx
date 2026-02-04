@@ -623,12 +623,46 @@ export default function PremadePotsPage() {
               </Select>
             </div>
 
-            {/* Orchid Composition Display */}
+            {/* Orchid Composition Selection */}
             <div className="space-y-2">
               <Label>{language === "vi" ? "Các loại lan trong chậu" : "Orchid Types in Pot"}</Label>
-              <div className="flex flex-wrap gap-1">
+              <Select
+                onValueChange={(value) => {
+                  const item = catalogItems.find(i => i.id === value);
+                  if (item && !(formData.orchidTypes || []).includes(language === "vi" ? item.speciesNameVi : item.speciesNameEn)) {
+                    setFormData(prev => ({
+                      ...prev,
+                      orchidTypes: [...(prev.orchidTypes || []), language === "vi" ? item.speciesNameVi : item.speciesNameEn]
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger data-testid="select-orchid-type">
+                  <SelectValue placeholder={language === "vi" ? "Chọn loại lan..." : "Select orchid type..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {catalogItems.filter(item => item.status === "ACTIVE").map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex flex-wrap gap-1 mt-2">
                 {(formData.orchidTypes || []).map((type, i) => (
-                  <Badge key={i} variant="secondary">{type}</Badge>
+                  <Badge key={i} variant="secondary" className="gap-1">
+                    {type}
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        orchidTypes: (prev.orchidTypes || []).filter((_, idx) => idx !== i)
+                      }))}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
                 {(!formData.orchidTypes || formData.orchidTypes.length === 0) && (
                   <span className="text-sm text-muted-foreground">{language === "vi" ? "Chưa có loại lan" : "No orchid types specified"}</span>

@@ -299,6 +299,7 @@ export default function CustomersPage() {
                           <TableHead>{t("form.fullName", language)}</TableHead>
                           <TableHead>{t("form.phone", language)}</TableHead>
                           <TableHead>{t("form.email", language)}</TableHead>
+                          <TableHead>{language === "vi" ? "Địa chỉ" : "Address"}</TableHead>
                           <TableHead className="text-center">{language === "vi" ? "Loại" : "Type"}</TableHead>
                           <TableHead className="text-right">{language === "vi" ? "Đơn hàng" : "Orders"}</TableHead>
                           <TableHead className="text-right">{language === "vi" ? "Tổng chi tiêu" : "Total Spent"}</TableHead>
@@ -316,6 +317,11 @@ export default function CustomersPage() {
                             <TableCell className="font-medium">{customer.fullName}</TableCell>
                             <TableCell>{customer.phoneNumber}</TableCell>
                             <TableCell className="text-muted-foreground">{customer.email || "-"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                              {[customer.streetAddress, customer.ward, customer.district, customer.province]
+                                .filter(Boolean)
+                                .join(", ") || "-"}
+                            </TableCell>
                             <TableCell className="text-center">{getCustomerTypeBadge(customer.customerType, customer.isBlocked)}</TableCell>
                             <TableCell className="text-right">{customer.totalOrders}</TableCell>
                             <TableCell className="text-right font-medium">
@@ -537,7 +543,7 @@ export default function CustomersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("form.streetAddress", language)}</Label>
+                <Label>{language === "vi" ? "Địa chỉ đường" : "Street Address"}</Label>
                 <Input
                   value={formData.streetAddress}
                   onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}

@@ -21,12 +21,13 @@ import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { PurchaseOrder, Supplier } from "@shared/schema";
+import type { PurchaseOrder, Supplier, CatalogItem, PotType, DecorationType } from "@shared/schema";
 
 interface FormData {
   supplierId: string;
   items: Array<{
     itemType: string;
+    catalogItemId: string;
     itemName: string;
     quantity: number;
     unitPrice: number;
@@ -62,6 +63,18 @@ export default function PurchaseOrdersPage() {
 
   const { data: suppliers = [] } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers"],
+  });
+
+  const { data: catalogItems = [] } = useQuery<CatalogItem[]>({
+    queryKey: ["/api/catalog"],
+  });
+
+  const { data: potTypes = [] } = useQuery<PotType[]>({
+    queryKey: ["/api/pot-types"],
+  });
+
+  const { data: decorationTypes = [] } = useQuery<DecorationType[]>({
+    queryKey: ["/api/decoration-types"],
   });
 
   const updateStatusMutation = useMutation({
@@ -149,8 +162,48 @@ export default function PurchaseOrdersPage() {
   const handleAddItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { itemType: "OTHER", itemName: "", quantity: 1, unitPrice: 0, subtotal: 0 }]
+      items: [...prev.items, { itemType: "ORCHID", catalogItemId: "", itemName: "", quantity: 1, unitPrice: 0, subtotal: 0 }]
     }));
+  };
+
+  const getAvailableItemsForType = (type: string) => {
+    switch (type) {
+      case "ORCHID":
+        return catalogItems.map(item => ({ id: item.id, name: item.name, price: parseFloat(item.basePrice) }));
+      case "POT":
+        return potTypes.map(item => ({ id: item.id, name: item.name, price: parseFloat(item.price || "0") }));
+      case "DECORATION":
+        return decorationTypes.map(item => ({ id: item.id, name: item.name, price: parseFloat(item.price || "0") }));
+      default:
+        return [];
+    }
+  };
+
+  const handleItemTypeChange = (index: number, type: string) => {
+    setFormData(prev => {
+      const items = [...prev.items];
+      items[index] = { ...items[index], itemType: type, catalogItemId: "", itemName: "", unitPrice: 0, subtotal: 0 };
+      return { ...prev, items };
+    });
+  };
+
+  const handleCatalogItemChange = (index: number, itemId: string) => {
+    const item = formData.items[index];
+    const availableItems = getAvailableItemsForType(item.itemType);
+    const selectedItem = availableItems.find(i => i.id === itemId);
+    if (selectedItem) {
+      setFormData(prev => {
+        const items = [...prev.items];
+        items[index] = { 
+          ...items[index], 
+          catalogItemId: itemId, 
+          itemName: selectedItem.name, 
+          unitPrice: selectedItem.price, 
+          subtotal: items[index].quantity * selectedItem.price 
+        };
+        return { ...prev, items };
+      });
+    }
   };
 
   const handleUpdateItem = (index: number, field: string, value: any) => {
@@ -391,12 +444,29 @@ export default function PurchaseOrdersPage() {
                 </Button>
               </div>
               {formData.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-5 gap-2 items-end">
-                  <Input
-                    placeholder={language === "vi" ? "Tên mặt hàng" : "Item name"}
-                    value={item.itemName}
-                    onChange={(e) => handleUpdateItem(index, "itemName", e.target.value)}
-                  />
+                <div key={index} className="grid grid-cols-6 gap-2 items-end">
+                  <Select value={item.itemType} onValueChange={(v) => handleItemTypeChange(index, v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ORCHID">{language === "vi" ? "Lan" : "Orchid"}</SelectItem>
+                      <SelectItem value="POT">{language === "vi" ? "Chậu" : "Pot"}</SelectItem>
+                      <SelectItem value="DECORATION">{language === "vi" ? "Trang trí" : "Decoration"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={item.catalogItemId} onValueChange={(v) => handleCatalogItemChange(index, v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={language === "vi" ? "Chọn..." : "Select..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableItemsForType(item.itemType).map((catalogItem) => (
+                        <SelectItem key={catalogItem.id} value={catalogItem.id}>
+                          {catalogItem.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     type="number"
                     placeholder={language === "vi" ? "SL" : "Qty"}

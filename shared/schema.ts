@@ -35,6 +35,7 @@ export const catalogItems = pgTable("catalog_items", {
   descriptionVi: text("description_vi"),
   descriptionEn: text("description_en"),
   imageUrl: text("image_url"),
+  supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"), // ACTIVE, INACTIVE, DISCONTINUED
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -55,6 +56,7 @@ export const potTypes = pgTable("pot_types", {
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
   imageUrl: text("image_url"),
+  supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -75,6 +77,7 @@ export const decorationTypes = pgTable("decoration_types", {
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
   imageUrl: text("image_url"),
+  supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -140,6 +143,7 @@ export const orders = pgTable("orders", {
   orderNumber: varchar("order_number").notNull().unique(),
   customerId: varchar("customer_id").references(() => customers.id),
   technicianId: varchar("technician_id").references(() => technicians.id),
+  priorityId: varchar("priority_id"),
   orderType: text("order_type").notNull().default("WEBSITE"), // WEBSITE, CHATBOT
   status: text("status").notNull().default("PENDING"), // PENDING, CONFIRMED, PREPARING, READY, SHIPPING, DELIVERED, CANCELLED
   customerName: text("customer_name").notNull(),
@@ -362,6 +366,43 @@ export const insertPaymentTypeSchema = createInsertSchema(paymentTypes).omit({
 });
 export type InsertPaymentType = z.infer<typeof insertPaymentTypeSchema>;
 export type PaymentType = typeof paymentTypes.$inferSelect;
+
+// ==================== PRIORITY TYPES ====================
+export const priorityTypes = pgTable("priority_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nameVi: text("name_vi").notNull(),
+  nameEn: text("name_en").notNull(),
+  level: integer("level").notNull().default(1), // 1=Low, 2=Medium, 3=High, etc.
+  color: text("color").notNull().default("#6B7280"), // Hex color for display
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPriorityTypeSchema = createInsertSchema(priorityTypes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPriorityType = z.infer<typeof insertPriorityTypeSchema>;
+export type PriorityType = typeof priorityTypes.$inferSelect;
+
+// ==================== NOTIFICATION CHANNELS ====================
+export const notificationChannels = pgTable("notification_channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nameVi: text("name_vi").notNull(),
+  nameEn: text("name_en").notNull(),
+  type: text("type").notNull(), // EMAIL, SMS, VOICEMAIL, ZALO
+  configJson: jsonb("config_json").$type<Record<string, string>>(),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationChannelSchema = createInsertSchema(notificationChannels).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNotificationChannel = z.infer<typeof insertNotificationChannelSchema>;
+export type NotificationChannel = typeof notificationChannels.$inferSelect;
 
 // ==================== SUPPLIERS ====================
 export const suppliers = pgTable("suppliers", {
