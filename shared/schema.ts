@@ -338,6 +338,124 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
+// ==================== PAYMENT TYPES ====================
+export const paymentTypes = pgTable("payment_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nameVi: text("name_vi").notNull(),
+  nameEn: text("name_en").notNull(),
+  descriptionVi: text("description_vi"),
+  descriptionEn: text("description_en"),
+  type: text("type").notNull().default("BANK_TRANSFER"), // BANK_TRANSFER, CASH, MOMO, ZALO_PAY
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  accountName: text("account_name"),
+  qrCodeUrl: text("qr_code_url"),
+  instructions: text("instructions"),
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPaymentTypeSchema = createInsertSchema(paymentTypes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPaymentType = z.infer<typeof insertPaymentTypeSchema>;
+export type PaymentType = typeof paymentTypes.$inferSelect;
+
+// ==================== SUPPLIERS ====================
+export const suppliers = pgTable("suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  contactPerson: text("contact_person"),
+  phoneNumber: text("phone_number").notNull(),
+  email: text("email"),
+  address: text("address"),
+  supplierType: text("supplier_type").notNull().default("ORCHID"), // ORCHID, POT, DECORATION, GENERAL
+  rating: decimal("rating", { precision: 2, scale: 1 }),
+  notes: text("notes"),
+  status: text("status").notNull().default("ACTIVE"), // ACTIVE, INACTIVE
+  totalOrders: integer("total_orders").notNull().default(0),
+  totalSpent: decimal("total_spent", { precision: 15, scale: 0 }).notNull().default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalOrders: true,
+  totalSpent: true,
+});
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type Supplier = typeof suppliers.$inferSelect;
+
+// ==================== PURCHASE ORDERS ====================
+export interface PurchaseOrderItem {
+  itemType: "ORCHID" | "POT" | "DECORATION" | "OTHER";
+  itemId?: string;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderNumber: varchar("order_number").notNull().unique(),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id),
+  status: text("status").notNull().default("PENDING"), // PENDING, CONFIRMED, SHIPPED, RECEIVED, CANCELLED
+  items: jsonb("items").notNull().$type<PurchaseOrderItem[]>(),
+  subtotal: decimal("subtotal", { precision: 15, scale: 0 }).notNull(),
+  shippingCost: decimal("shipping_cost", { precision: 12, scale: 0 }).notNull().default("0"),
+  taxAmount: decimal("tax_amount", { precision: 15, scale: 0 }).notNull().default("0"),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 0 }).notNull(),
+  paymentStatus: text("payment_status").notNull().default("UNPAID"), // UNPAID, PARTIAL, PAID
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 0 }).notNull().default("0"),
+  notes: text("notes"),
+  expectedDelivery: timestamp("expected_delivery"),
+  receivedAt: timestamp("received_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  receivedAt: true,
+});
+export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+
+// ==================== NOTIFICATIONS ====================
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // ORDER_CREATED, ORDER_UPDATED, PAYMENT_RECEIVED, LOW_STOCK, SUPPLIER_DELIVERY, SYSTEM
+  recipientType: text("recipient_type").notNull(), // ADMIN, CUSTOMER, SUPPLIER
+  recipientId: varchar("recipient_id"),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  channel: text("channel").notNull().default("SYSTEM"), // SYSTEM, EMAIL, SMS, ZALO
+  status: text("status").notNull().default("PENDING"), // PENDING, SENT, FAILED, READ
+  relatedEntity: text("related_entity"),
+  relatedEntityId: varchar("related_entity_id"),
+  metadata: jsonb("metadata"),
+  sentAt: timestamp("sent_at"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  sentAt: true,
+  readAt: true,
+});
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
 // ==================== VALIDATION SCHEMAS ====================
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),

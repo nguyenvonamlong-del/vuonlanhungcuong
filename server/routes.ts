@@ -688,4 +688,320 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ error: "Failed to fetch chat messages" });
     }
   });
+
+  // ==================== POT TYPES CRUD ====================
+  app.get("/api/pot-types", async (req, res) => {
+    try {
+      const items = await storage.getPotTypes();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch pot types" });
+    }
+  });
+
+  app.post("/api/pot-types", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const created = await storage.createPotType(req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create pot type" });
+    }
+  });
+
+  app.put("/api/pot-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.updatePotType(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update pot type" });
+    }
+  });
+
+  app.delete("/api/pot-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.deletePotType(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete pot type" });
+    }
+  });
+
+  // ==================== DECORATION TYPES CRUD ====================
+  app.get("/api/decoration-types", async (req, res) => {
+    try {
+      const items = await storage.getDecorationTypes();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch decoration types" });
+    }
+  });
+
+  app.post("/api/decoration-types", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const created = await storage.createDecorationType(req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create decoration type" });
+    }
+  });
+
+  app.put("/api/decoration-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.updateDecorationType(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update decoration type" });
+    }
+  });
+
+  app.delete("/api/decoration-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.deleteDecorationType(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete decoration type" });
+    }
+  });
+
+  // ==================== PAYMENT TYPES ====================
+  app.get("/api/payment-types", async (req, res) => {
+    try {
+      const items = await storage.getPaymentTypes();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payment types" });
+    }
+  });
+
+  app.post("/api/payment-types", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const created = await storage.createPaymentType(req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create payment type" });
+    }
+  });
+
+  app.put("/api/payment-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.updatePaymentType(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update payment type" });
+    }
+  });
+
+  app.delete("/api/payment-types/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.deletePaymentType(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete payment type" });
+    }
+  });
+
+  // ==================== SUPPLIERS ====================
+  app.get("/api/suppliers", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const items = await storage.getSuppliers();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch suppliers" });
+    }
+  });
+
+  app.get("/api/suppliers/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const supplier = await storage.getSupplierById(req.params.id);
+      if (!supplier) return res.status(404).json({ error: "Supplier not found" });
+      res.json(supplier);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch supplier" });
+    }
+  });
+
+  app.post("/api/suppliers", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const created = await storage.createSupplier(req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create supplier" });
+    }
+  });
+
+  app.put("/api/suppliers/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.updateSupplier(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: "Supplier not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update supplier" });
+    }
+  });
+
+  app.delete("/api/suppliers/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.deleteSupplier(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete supplier" });
+    }
+  });
+
+  // ==================== PURCHASE ORDERS ====================
+  app.get("/api/purchase-orders", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const items = await storage.getPurchaseOrders();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch purchase orders" });
+    }
+  });
+
+  app.get("/api/purchase-orders/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const order = await storage.getPurchaseOrderById(req.params.id);
+      if (!order) return res.status(404).json({ error: "Purchase order not found" });
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch purchase order" });
+    }
+  });
+
+  app.post("/api/purchase-orders", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const orderNumber = await storage.generatePurchaseOrderNumber();
+      const created = await storage.createPurchaseOrder({
+        ...req.body,
+        orderNumber,
+        createdBy: (req.session as any).user.id,
+      });
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create purchase order" });
+    }
+  });
+
+  app.put("/api/purchase-orders/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.updatePurchaseOrder(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: "Purchase order not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update purchase order" });
+    }
+  });
+
+  // ==================== NOTIFICATIONS ====================
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { recipientType, recipientId } = req.query;
+      const items = await storage.getNotifications(
+        recipientType as string | undefined,
+        recipientId as string | undefined
+      );
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const created = await storage.createNotification(req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create notification" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const updated = await storage.markNotificationRead(req.params.id);
+      if (!updated) return res.status(404).json({ error: "Notification not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  // ==================== ACTIVITIES (Audit Log) ====================
+  app.get("/api/activities", async (req, res) => {
+    try {
+      if (!(req.session as any)?.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const limit = parseInt(req.query.limit as string) || 100;
+      const items = await storage.getActivities(limit);
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
 }

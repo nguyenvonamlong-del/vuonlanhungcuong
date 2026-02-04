@@ -12,12 +12,18 @@ import {
   shippingTypes,
   activities,
   settings,
+  paymentTypes,
+  suppliers,
+  purchaseOrders,
+  notifications,
   type User,
   type InsertUser,
   type CatalogItem,
   type InsertCatalogItem,
   type PotType,
+  type InsertPotType,
   type DecorationType,
+  type InsertDecorationType,
   type PremadePot,
   type InsertPremadePot,
   type Customer,
@@ -32,6 +38,14 @@ import {
   type InsertActivity,
   type Settings,
   type DashboardStats,
+  type PaymentType,
+  type InsertPaymentType,
+  type Supplier,
+  type InsertSupplier,
+  type PurchaseOrder,
+  type InsertPurchaseOrder,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { v4 as uuidv4 } from "uuid";
 
@@ -103,6 +117,44 @@ export interface IStorage {
   // Utility
   generateOrderNumber(): Promise<string>;
   generateTrackingToken(): Promise<string>;
+  generatePurchaseOrderNumber(): Promise<string>;
+  
+  // Pot Types (CRUD)
+  createPotType(potType: InsertPotType): Promise<PotType>;
+  updatePotType(id: string, potType: Partial<InsertPotType>): Promise<PotType | undefined>;
+  deletePotType(id: string): Promise<boolean>;
+  
+  // Decoration Types (CRUD)
+  createDecorationType(decorationType: InsertDecorationType): Promise<DecorationType>;
+  updateDecorationType(id: string, decorationType: Partial<InsertDecorationType>): Promise<DecorationType | undefined>;
+  deleteDecorationType(id: string): Promise<boolean>;
+  
+  // Payment Types
+  getPaymentTypes(): Promise<PaymentType[]>;
+  getPaymentTypeById(id: string): Promise<PaymentType | undefined>;
+  createPaymentType(paymentType: InsertPaymentType): Promise<PaymentType>;
+  updatePaymentType(id: string, paymentType: Partial<InsertPaymentType>): Promise<PaymentType | undefined>;
+  deletePaymentType(id: string): Promise<boolean>;
+  
+  // Suppliers
+  getSuppliers(): Promise<Supplier[]>;
+  getSupplierById(id: string): Promise<Supplier | undefined>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
+  deleteSupplier(id: string): Promise<boolean>;
+  
+  // Purchase Orders
+  getPurchaseOrders(): Promise<PurchaseOrder[]>;
+  getPurchaseOrderById(id: string): Promise<PurchaseOrder | undefined>;
+  createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder>;
+  updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder | undefined>;
+  
+  // Notifications
+  getNotifications(recipientType?: string, recipientId?: string): Promise<Notification[]>;
+  getNotificationById(id: string): Promise<Notification | undefined>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  updateNotification(id: string, notification: Partial<InsertNotification>): Promise<Notification | undefined>;
+  markNotificationRead(id: string): Promise<Notification | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -408,6 +460,155 @@ export class DatabaseStorage implements IStorage {
       .update(settings)
       .set({ value, updatedAt: new Date() })
       .where(eq(settings.key, key))
+      .returning();
+    return updated;
+  }
+  
+  // Pot Types CRUD
+  async createPotType(potType: InsertPotType): Promise<PotType> {
+    const [created] = await db.insert(potTypes).values({ ...potType, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updatePotType(id: string, potType: Partial<InsertPotType>): Promise<PotType | undefined> {
+    const [updated] = await db.update(potTypes).set(potType).where(eq(potTypes.id, id)).returning();
+    return updated;
+  }
+
+  async deletePotType(id: string): Promise<boolean> {
+    await db.delete(potTypes).where(eq(potTypes.id, id));
+    return true;
+  }
+
+  // Decoration Types CRUD
+  async createDecorationType(decorationType: InsertDecorationType): Promise<DecorationType> {
+    const [created] = await db.insert(decorationTypes).values({ ...decorationType, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateDecorationType(id: string, decorationType: Partial<InsertDecorationType>): Promise<DecorationType | undefined> {
+    const [updated] = await db.update(decorationTypes).set(decorationType).where(eq(decorationTypes.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDecorationType(id: string): Promise<boolean> {
+    await db.delete(decorationTypes).where(eq(decorationTypes.id, id));
+    return true;
+  }
+
+  // Payment Types
+  async getPaymentTypes(): Promise<PaymentType[]> {
+    return db.select().from(paymentTypes).orderBy(desc(paymentTypes.createdAt));
+  }
+
+  async getPaymentTypeById(id: string): Promise<PaymentType | undefined> {
+    const [paymentType] = await db.select().from(paymentTypes).where(eq(paymentTypes.id, id));
+    return paymentType;
+  }
+
+  async createPaymentType(paymentType: InsertPaymentType): Promise<PaymentType> {
+    const [created] = await db.insert(paymentTypes).values({ ...paymentType, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updatePaymentType(id: string, paymentType: Partial<InsertPaymentType>): Promise<PaymentType | undefined> {
+    const [updated] = await db.update(paymentTypes).set(paymentType).where(eq(paymentTypes.id, id)).returning();
+    return updated;
+  }
+
+  async deletePaymentType(id: string): Promise<boolean> {
+    await db.delete(paymentTypes).where(eq(paymentTypes.id, id));
+    return true;
+  }
+
+  // Suppliers
+  async getSuppliers(): Promise<Supplier[]> {
+    return db.select().from(suppliers).orderBy(desc(suppliers.createdAt));
+  }
+
+  async getSupplierById(id: string): Promise<Supplier | undefined> {
+    const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, id));
+    return supplier;
+  }
+
+  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
+    const [created] = await db.insert(suppliers).values({ ...supplier, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined> {
+    const [updated] = await db.update(suppliers).set({ ...supplier, updatedAt: new Date() }).where(eq(suppliers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSupplier(id: string): Promise<boolean> {
+    await db.delete(suppliers).where(eq(suppliers.id, id));
+    return true;
+  }
+
+  // Purchase Orders
+  async getPurchaseOrders(): Promise<PurchaseOrder[]> {
+    return db.select().from(purchaseOrders).orderBy(desc(purchaseOrders.createdAt));
+  }
+
+  async getPurchaseOrderById(id: string): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
+    return order;
+  }
+
+  async createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder> {
+    const [created] = await db.insert(purchaseOrders).values({ ...order, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder | undefined> {
+    const [updated] = await db.update(purchaseOrders).set({ ...order, updatedAt: new Date() }).where(eq(purchaseOrders.id, id)).returning();
+    return updated;
+  }
+
+  async generatePurchaseOrderNumber(): Promise<string> {
+    const date = new Date();
+    const prefix = `PO${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+    const [result] = await db.select({ count: count() }).from(purchaseOrders)
+      .where(sql`${purchaseOrders.orderNumber} LIKE ${prefix + "%"}`);
+    const num = (result?.count || 0) + 1;
+    return `${prefix}${String(num).padStart(4, "0")}`;
+  }
+
+  // Notifications
+  async getNotifications(recipientType?: string, recipientId?: string): Promise<Notification[]> {
+    if (recipientType && recipientId) {
+      return db.select().from(notifications)
+        .where(and(eq(notifications.recipientType, recipientType), eq(notifications.recipientId, recipientId)))
+        .orderBy(desc(notifications.createdAt));
+    }
+    if (recipientType) {
+      return db.select().from(notifications)
+        .where(eq(notifications.recipientType, recipientType))
+        .orderBy(desc(notifications.createdAt));
+    }
+    return db.select().from(notifications).orderBy(desc(notifications.createdAt));
+  }
+
+  async getNotificationById(id: string): Promise<Notification | undefined> {
+    const [notification] = await db.select().from(notifications).where(eq(notifications.id, id));
+    return notification;
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values({ ...notification, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateNotification(id: string, notification: Partial<InsertNotification>): Promise<Notification | undefined> {
+    const [updated] = await db.update(notifications).set(notification).where(eq(notifications.id, id)).returning();
+    return updated;
+  }
+
+  async markNotificationRead(id: string): Promise<Notification | undefined> {
+    const [updated] = await db.update(notifications)
+      .set({ status: "READ", readAt: new Date() })
+      .where(eq(notifications.id, id))
       .returning();
     return updated;
   }
