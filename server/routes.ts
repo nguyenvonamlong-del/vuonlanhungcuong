@@ -6,7 +6,9 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { getOrCreateConversation, getChatMessages, streamChatResponse, getConversationById } from "./chatbot";
 
 // Schema for public order creation with required payment proof
 // Matches actual frontend data structure for both premade and custom composition orders
@@ -559,6 +561,126 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update setting" });
+    }
+  });
+
+  // ========== CHATBOT ROUTES ==========
+  
+  // Get or create a chat session
+  app.post("/api/chat/session", async (req, res) => {
+    try {
+      const userType = (req.session as any)?.user?.role === "ADMIN" ? "ADMIN" : "CUSTOMER";
+      const userId = (req.session as any)?.user?.id;
+      const sessionId = (req as any).sessionID || randomUUID();
+      
+      const conversation = await getOrCreateConversation(sessionId, userType, userId);
+      const messages = await getChatMessages(conversation.id);
+      
+      res.json({ conversation, messages });
+    } catch (error) {
+      console.error("Error getting chat session:", error);
+      res.status(500).json({ error: "Failed to get chat session" });
+    }
+  });
+
+  // Send a message and get streaming response
+  app.post("/api/chat/message", async (req, res) => {
+    try {
+      const { conversationId, message } = req.body;
+      
+      if (!conversationId || !message) {
+        return res.status(400).json({ error: "Conversation ID and message are required" });
+      }
+      
+      // Get the conversation and verify ownership
+      const conversation = await getConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      
+      const currentSessionId = (req as any).sessionID;
+      const currentUserId = (req.session as any)?.user?.id;
+      const isAdmin = (req.session as any)?.user?.role === "ADMIN";
+      
+      // Verify conversation ownership: must match session ID or user ID
+      const ownsConversation = 
+        (conversation.sessionId && conversation.sessionId === currentSessionId) ||
+        (conversation.userId && conversation.userId === currentUserId);
+      
+      if (!ownsConversation) {
+        return res.status(403).json({ error: "Not authorized to access this conversation" });
+      }
+      
+      // Determine the actual user type based on the conversation's type
+      // This prevents CUSTOMER conversations from being used to get ADMIN data
+      const userType = conversation.userType as "CUSTOMER" | "ADMIN";
+      
+      // If conversation is ADMIN type, verify the user is actually an admin
+      if (userType === "ADMIN" && !isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      
+      // Handle client disconnect
+      let isAborted = false;
+      res.on("close", () => {
+        isAborted = true;
+      });
+      
+      const stream = streamChatResponse(conversationId, message, {
+        userType,
+        userId: currentUserId,
+        sessionId: currentSessionId
+      });
+      
+      for await (const content of stream) {
+        if (isAborted) break;
+        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
+      
+      if (!isAborted) {
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      }
+      res.end();
+    } catch (error) {
+      console.error("Error in chat message:", error);
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: "Failed to process message" })}\n\n`);
+        res.end();
+      } else {
+        res.status(500).json({ error: "Failed to process message" });
+      }
+    }
+  });
+
+  // Get chat history - requires ownership verification
+  app.get("/api/chat/messages/:conversationId", async (req, res) => {
+    try {
+      const conversation = await getConversationById(req.params.conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      
+      const currentSessionId = (req as any).sessionID;
+      const currentUserId = (req.session as any)?.user?.id;
+      
+      // Verify ownership
+      const ownsConversation = 
+        (conversation.sessionId && conversation.sessionId === currentSessionId) ||
+        (conversation.userId && conversation.userId === currentUserId);
+      
+      if (!ownsConversation) {
+        return res.status(403).json({ error: "Not authorized to access this conversation" });
+      }
+      
+      const messages = await getChatMessages(req.params.conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      res.status(500).json({ error: "Failed to fetch chat messages" });
     }
   });
 }

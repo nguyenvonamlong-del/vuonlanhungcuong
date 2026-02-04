@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
 import { AuthGuard } from "@/components/auth-guard";
+import { Chatbot } from "@/components/chatbot";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
@@ -54,6 +55,7 @@ function App() {
         <AppProvider>
           <Toaster />
           <Router />
+          <Chatbot />
         </AppProvider>
       </TooltipProvider>
     </QueryClientProvider>

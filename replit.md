@@ -4,6 +4,22 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: AI Chatbot feature:
+  - Added floating chatbot button on all pages (bottom-right corner)
+  - Customer chatbot: helps with product inquiries, ordering info, and order tracking
+  - Admin chatbot: provides real-time business insights (inventory, orders, revenue, technicians)
+  - Uses OpenAI via Replit AI Integrations for natural language responses
+  - Streaming responses for real-time chat experience
+  - Role-based access: Customers see customer assistant, logged-in admins see business assistant
+
+- **2026-02-04**: Business information updates:
+  - English name: "Hùng Cường Orchid Garden"
+  - Address: Đội 10, Xích Đằng, phường Lam Sơn, TP. Hưng Yên, tỉnh Hưng Yên
+  - Phone: 0983 270 995
+  - Email: Thanhtusky147@gmail.com
+  - Payment: VIETCOMBANK account 9983270995 (LE THI THANH TU)
+  - Static QR code image for payment (client/public/assets/vietcombank-qr.png)
+
 - **2026-02-04**: Pot composition enhancements:
   - Added pot type selection per pot (e.g., ceramic, terracotta, cement pots)
   - Added decoration type selection per pot (e.g., pebbles, moss, bark chips)
