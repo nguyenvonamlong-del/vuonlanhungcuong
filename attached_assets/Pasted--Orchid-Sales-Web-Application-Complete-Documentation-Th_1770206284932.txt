@@ -1,0 +1,940 @@
+# Orchid Sales Web Application - Complete Documentation
+
+This documentation provides comprehensive specifications for building a full-featured orchid sales management web application.
+
+## Table of Contents
+1. [System Overview](#system-overview)
+2. [User Roles & Permissions](#user-roles--permissions)
+3. [Core Modules](#core-modules)
+4. [Data Models](#data-models)
+5. [Business Rules](#business-rules)
+6. [UI Design Specifications](#ui-design-specifications)
+7. [Component Architecture](#component-architecture)
+8. [API Requirements](#api-requirements)
+9. [VietQR Payment Integration](#vietqr-payment-integration)
+10. [Pre-Made Orchid Pots Feature](#pre-made-orchid-pots-feature)
+
+---
+
+## System Overview
+
+### Purpose
+A comprehensive web application for managing an orchid business end-to-end, supporting:
+- Supplier management
+- Inventory tracking
+- Customer orders (custom compositions and pre-made pots)
+- Technician operations
+- Delivery logistics
+- Two ordering channels: website checkout and AI chatbot
+- Pre-made orchid pot catalog with browsing and shopping cart
+- Multi-language support (Vietnamese and English)
+- Role-based access control (RBAC)
+- VietQR payment integration for Vietnam market
+
+### Technology Stack
+- **Frontend**: React 18+ with TypeScript
+- **Routing**: React Router (Data mode)
+- **Styling**: Tailwind CSS v4
+- **State Management**: React Context API
+- **Icons**: Lucide React
+- **Charts**: Recharts
+- **Backend**: RESTful API
+- **Database**: PostgreSQL
+- **Payment**: VietQR API integration
+- **Authentication**: JWT-based
+
+---
+
+## User Roles & Permissions
+
+### ADMIN Role
+- Full system access
+- User management
+- System configuration
+- Audit log access
+- All MANAGER capabilities
+
+### MANAGER Role
+- Dashboard with full statistics
+- Catalog management
+- Inventory management
+- Customer management
+- Supplier management
+- Purchase order management
+- Technician management
+- Reports access
+- Order management
+- All EMPLOYEE capabilities
+
+### EMPLOYEE Role
+- Limited dashboard access
+- View orders (read-only)
+- Update order status (limited)
+- Assign technicians
+- View customer info (read-only)
+- View catalog (read-only)
+
+### GUEST Role
+- View landing page
+- Access checkout flow
+- Create orders without login
+- Track orders with token
+- Use chatbot for ordering
+
+---
+
+## Core Modules
+
+### 1. Landing Page
+- Hero section with business name and CTA
+- Features showcase
+- About section
+- Testimonials
+- Contact information
+- Language toggle (VI/EN)
+
+### 2. Login Module
+- Email/password authentication
+- Role-based routing
+- Session management
+
+### 3. Dashboard
+- Statistics cards (revenue, orders, technicians, stock)
+- Revenue chart (7-day trend)
+- Order status distribution
+- Recent orders table
+- Quick action cards
+
+### 4. Catalog Management
+- List all orchid species
+- Add/edit/delete catalog items
+- Stock level tracking
+- Multi-language support
+- Image management
+
+### 5. Orders Module
+- Order list with filters
+- Order detail view
+- Status workflow management
+- Technician assignment
+- Payment tracking
+- Order timeline
+
+### 6. Checkout Flow
+- Step 1: Composition builder (multi-pot)
+- Step 2: Customer information
+- Step 3: Shipping selection
+- Step 4: Order review
+- Step 5: Payment (QR code)
+
+### 7. Inventory Management
+- Real-time stock tracking
+- Stock adjustments
+- Transaction history
+- Low stock alerts
+- Automated updates
+
+### 8. Customer Management
+- Customer profiles
+- Order history
+- Address management
+- Customer segmentation
+- Notes and tags
+
+### 9. Technician Management
+- Technician profiles
+- Workload tracking
+- Assignment management
+- Performance metrics
+- Specialization tracking
+
+### 10. Supplier Management
+- Supplier profiles
+- Contact management
+- Performance tracking
+- Purchase order history
+
+### 11. Purchase Orders
+- Create/edit purchase orders
+- Receiving workflow
+- Payment tracking
+- Supplier integration
+
+### 12. Shipping Configuration
+- Shipment types management
+- Pricing configuration
+- Delivery time estimation
+
+### 13. Reports
+- Sales reports
+- Inventory reports
+- Customer reports
+- Technician performance
+- Financial reports
+
+### 14. Activities Feed
+- Real-time activity stream
+- User action tracking
+- Entity linking
+
+### 15. Notifications
+- In-app notifications
+- Email/SMS integration
+- Notification preferences
+- Priority levels
+
+### 16. Audit Log
+- Immutable audit trail
+- Compliance tracking
+- Security monitoring
+- Change history
+
+### 17. Settings
+- Business information
+- User management
+- System configuration
+- Integration settings
+
+### 18. Order Tracking (Public)
+- Token-based tracking
+- Status timeline
+- Delivery estimation
+
+### 19. Chatbot
+- Conversational ordering
+- Order tracking
+- Catalog browsing
+- Customer support
+
+---
+
+## Data Models
+
+### CatalogItem
+```json
+{
+  "catalog_id": "uuid",
+  "species_name_vi": "string",
+  "species_name_en": "string",
+  "color": "string",
+  "height_cm": "number",
+  "price_per_unit": "number",
+  "stock_quantity": "number",
+  "min_order_quantity": "number (default: 5)",
+  "description_vi": "string",
+  "description_en": "string",
+  "image_url": "string",
+  "status": "ACTIVE|INACTIVE|DISCONTINUED"
+}
+```
+
+### Order
+```json
+{
+  "order_id": "uuid",
+  "customer_id": "uuid",
+  "order_type": "WEBSITE|CHATBOT",
+  "status": "PENDING|CONFIRMED|PREPARING|READY|SHIPPING|DELIVERED|CANCELLED",
+  "customer_name": "string",
+  "customer_phone": "string",
+  "customer_email": "string",
+  "province": "string",
+  "district": "string",
+  "ward": "string",
+  "street_address": "string",
+  "pots": [
+    {
+      "pot_id": "uuid",
+      "pot_name": "string",
+      "orchids": [
+        {
+          "catalog_id": "uuid",
+          "species_name": "string",
+          "color": "string",
+          "quantity": "number",
+          "price_per_unit": "number",
+          "subtotal": "number"
+        }
+      ],
+      "pot_subtotal": "number"
+    }
+  ],
+  "subtotal": "number",
+  "shipping_cost": "number",
+  "total_amount": "number",
+  "deposit_amount": "number (50%)",
+  "deposit_paid": "boolean",
+  "remaining_amount": "number (50%)",
+  "remaining_paid": "boolean",
+  "tracking_token": "string"
+}
+```
+
+### Customer
+```json
+{
+  "customer_id": "uuid",
+  "full_name": "string",
+  "phone_number": "string (unique)",
+  "email": "string (optional)",
+  "customer_type": "GUEST|REGISTERED|VIP",
+  "addresses": [],
+  "total_orders": "number",
+  "total_spent": "number",
+  "tags": ["string"]
+}
+```
+
+### Technician
+```json
+{
+  "technician_id": "uuid",
+  "full_name": "string",
+  "phone_number": "string",
+  "specialization": ["string"],
+  "status": "ACTIVE|INACTIVE|ON_LEAVE",
+  "current_workload": "number",
+  "max_workload": "number (default: 5)",
+  "performance_rating": "number (1-5)"
+}
+```
+
+---
+
+## Business Rules
+
+### Order Creation
+1. **Minimum Quantity**: Each pot must contain at least 5 orchids
+2. **Deposit Requirement**: 50% deposit required before confirmation
+3. **Stock Validation**: Check availability before order confirmation
+4. **Phone Format**: Vietnamese format /^0\d{9,10}$/
+
+### Order Status Workflow
+- PENDING → CONFIRMED (requires deposit payment)
+- CONFIRMED → PREPARING (requires technician assignment)
+- PREPARING → READY (technician completes work)
+- READY → SHIPPING (package handed to shipper)
+- SHIPPING → DELIVERED (requires remaining payment)
+- Any status → CANCELLED (with reason)
+
+### Inventory Management
+- Stock deducted on order CONFIRMED
+- Stock returned on order CANCELLED
+- Low stock alert when quantity < min_order_quantity * 10
+- Automated transaction logging
+
+### Payment Processing
+- Deposit: 50% of total, paid before confirmation
+- Remaining: 50% of total, paid on delivery or in advance
+- QR code generated for bank transfer
+- Manual verification by staff
+
+---
+
+## UI Design Specifications
+
+### Color Palette
+- **Primary**: Purple (#9333EA)
+- **Success**: Green (#10B981)
+- **Warning**: Yellow (#F59E0B)
+- **Error**: Red (#EF4444)
+- **Info**: Blue (#3B82F6)
+
+### Status Badge Colors
+- PENDING: Yellow
+- CONFIRMED: Blue
+- PREPARING: Purple
+- READY: Cyan
+- SHIPPING: Orange
+- DELIVERED: Green
+- CANCELLED: Red
+
+### Layout
+- Staff layout: Header + Sidebar + Main content
+- Public layout: Header + Main content (no sidebar)
+- Responsive breakpoints: sm(640px), md(768px), lg(1024px), xl(1280px)
+
+### Components
+- Buttons: Primary, Secondary, Danger, Ghost
+- Forms: Input, Select, Textarea, Checkbox, Radio
+- Cards: White background, rounded corners, shadow
+- Tables: Striped rows, hover effects, pagination
+- Modals: Overlay + centered container
+
+---
+
+## Component Architecture
+
+### Context Providers
+- **AppContext**: Language, user role, authentication state
+
+### Shared Components
+- Layout, Header, Sidebar, Footer
+- Button, Input, Select, Badge, Card, Modal
+- Table, Chart, StatCard, Timeline
+- OrderSummary, PotComposer, PaymentQRCode
+
+### Page Components
+- Landing, Login, Dashboard
+- Catalog, Orders, OrderDetail, Checkout
+- Inventory, Customers, Technicians
+- Suppliers, PurchaseOrders, Shipping
+- Reports, Activities, Notifications
+- AuditLog, Settings, Tracking
+
+---
+
+## API Requirements
+
+### Authentication
+- POST /api/auth/login
+- POST /api/auth/logout
+- POST /api/auth/refresh
+
+### Catalog
+- GET /api/catalog
+- GET /api/catalog/:id
+- POST /api/catalog
+- PUT /api/catalog/:id
+- DELETE /api/catalog/:id
+
+### Orders
+- GET /api/orders
+- GET /api/orders/:id
+- POST /api/orders
+- PUT /api/orders/:id/status
+- PUT /api/orders/:id/assign-technician
+- PUT /api/orders/:id/payment
+- GET /api/orders/track/:token
+
+### Inventory
+- GET /api/inventory
+- POST /api/inventory/adjust
+- GET /api/inventory/:catalogId/history
+
+### Customers
+- GET /api/customers
+- GET /api/customers/:id
+- POST /api/customers
+- PUT /api/customers/:id
+
+### Technicians
+- GET /api/technicians
+- GET /api/technicians/available
+- POST /api/technicians/auto-assign
+
+### Additional Endpoints
+- Suppliers, Purchase Orders, Shipping, Reports
+- Activities, Notifications, Audit Logs, Settings
+
+---
+
+## Implementation Notes
+
+### Phase 1: Core Features
+- Landing page, Login, Dashboard
+- Catalog management
+- Basic order creation and tracking
+- Inventory management
+
+### Phase 2: Advanced Features
+- Customer and technician management
+- Purchase orders and suppliers
+- Reports and analytics
+- Notifications system
+
+### Phase 3: Enhancements
+- Chatbot integration
+- Payment gateway integration
+- Advanced reporting
+- Mobile optimization
+
+---
+
+## VietQR Payment Integration
+
+### Overview
+VietQR is a standardized QR payment system in Vietnam that enables instant bank transfers through QR code scanning. The integration provides a seamless payment experience for Vietnamese customers.
+
+### VietQR API Documentation
+- **Official Website**: https://www.vietqr.io
+- **API Documentation**: https://www.vietqr.io/danh-sach-api
+- **Supported Banks**: 40+ Vietnamese banks (VCB, TCB, MB, ACB, etc.)
+
+### Configuration Requirements
+1. **Bank Information**
+   - Bank ID (e.g., VCB for Vietcombank)
+   - Account Number
+   - Account Holder Name
+   - Branch (optional)
+
+2. **QR Code Templates**
+   - `compact`: Minimal QR with bank info
+   - `compact2`: QR with amount and description
+   - `print`: High-quality for printing
+   - `qr_only`: Just the QR code image
+
+### Implementation Details
+
+#### 1. QR Code Generation
+**URL Format:**
+```
+https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-{TEMPLATE}.jpg?amount={AMOUNT}&addInfo={DESCRIPTION}&accountName={ACCOUNT_NAME}
+```
+
+**Parameters:**
+- `BANK_ID`: Bank identifier (e.g., VCB, TCB, MB)
+- `ACCOUNT_NO`: Bank account number
+- `TEMPLATE`: QR template type
+- `amount`: Transaction amount in VND
+- `addInfo`: Payment description/reference (URL encoded)
+- `accountName`: Account holder name (URL encoded)
+
+**Example:**
+```
+https://img.vietqr.io/image/VCB-1234567890-compact2.jpg?amount=1250000&addInfo=ORCHID%20ORD12345&accountName=VUON%20LAN%20HUNG%20CUONG
+```
+
+#### 2. Payment Flow
+1. **Order Creation**
+   - Customer creates order
+   - System calculates 50% deposit amount
+   - Generate unique order reference code
+
+2. **QR Code Display**
+   - Generate VietQR URL with order details
+   - Display QR code in payment step
+   - Show manual transfer details as fallback
+   - Include copy buttons for easy transfer
+
+3. **Payment Verification**
+   - Customer scans QR and pays via banking app
+   - Customer uploads payment proof (optional)
+   - Staff manually verifies payment
+   - Update order status to CONFIRMED
+
+4. **Automatic Verification (Future Enhancement)**
+   - Webhook from bank for instant confirmation
+   - Transaction matching by reference code
+   - Automatic order status update
+
+#### 3. Security Considerations
+- Never expose bank credentials in frontend
+- Store bank config in environment variables
+- Validate all payment proofs server-side
+- Implement rate limiting on QR generation
+- Log all payment transactions
+
+#### 4. Error Handling
+- Fallback to generic QR generator if VietQR fails
+- Display manual transfer instructions
+- Timeout handling for slow networks
+- Clear error messages in both languages
+
+### Backend API Endpoints
+
+#### Generate Payment QR
+```
+POST /api/payment/generate-qr
+Request:
+{
+  "order_id": "uuid",
+  "amount": 1250000,
+  "description": "ORCHID ORD12345"
+}
+
+Response:
+{
+  "qr_image_url": "string",
+  "bank_info": {
+    "bank_name": "string",
+    "account_number": "string",
+    "account_holder": "string",
+    "amount": "number",
+    "description": "string"
+  }
+}
+```
+
+#### Verify Payment
+```
+POST /api/payment/verify
+Request:
+{
+  "order_id": "uuid",
+  "payment_proof_url": "string (optional)",
+  "transaction_reference": "string"
+}
+
+Response:
+{
+  "verified": "boolean",
+  "payment_date": "datetime",
+  "status": "PENDING|VERIFIED|REJECTED"
+}
+```
+
+### Frontend Implementation
+
+#### PaymentQRCode Component
+**Location**: `/components/PaymentQRCode.tsx`
+
+**Features:**
+1. Display VietQR code image
+2. Show bank transfer details
+3. Copy buttons for account info
+4. Payment proof upload (optional)
+5. Multiple payment methods (Bank, MoMo, ZaloPay)
+6. Bilingual support
+
+**Props:**
+```typescript
+interface PaymentQRCodeProps {
+  order: Order;
+  language: 'vi' | 'en';
+}
+```
+
+**Usage:**
+```tsx
+<PaymentQRCode order={currentOrder} language={language} />
+```
+
+### Testing Checklist
+- ✅ QR code generates correctly
+- ✅ QR code is scannable with banking apps
+- ✅ Amount displays correctly in QR
+- ✅ Payment description is accurate
+- ✅ Fallback works if QR fails to load
+- ✅ Copy buttons work for all fields
+- ✅ Mobile responsive design
+- ✅ Works in both Vietnamese and English
+
+---
+
+## Pre-Made Orchid Pots Feature
+
+### Overview
+The pre-made pots feature allows Admin/Manager users to create a catalog of finished orchid pot compositions that customers can browse and purchase directly, without customization.
+
+### Business Use Cases
+1. **Quick Purchase**: Customers who want immediate solutions
+2. **Gift Giving**: Ready-made elegant gift options
+3. **Seasonal Collections**: Holiday-themed arrangements
+4. **Bestseller Showcase**: Popular combinations
+5. **Inventory Clearance**: Move excess stock
+
+### Feature Components
+
+#### 1. Pre-Made Pots Management (Admin/Manager)
+**Route**: `/premade-pots`
+**Access**: Admin, Manager roles only
+
+**Capabilities:**
+1. **Create New Pots**
+   - Bilingual names and descriptions
+   - Multiple image uploads
+   - Video uploads (optional)
+   - Orchid type tags
+   - Pot size specification
+   - Height measurement
+   - Care difficulty level
+   - Care instructions
+   - Pricing
+   - Stock quantity
+   - Featured flag
+
+2. **Edit Existing Pots**
+   - Update all fields
+   - Change status (Active/Inactive/Out of Stock)
+   - Update inventory levels
+
+3. **Delete Pots**
+   - Soft delete with confirmation
+   - Maintain order history
+
+4. **Search and Filter**
+   - Search by name
+   - Filter by status
+   - Sort by various criteria
+
+#### 2. Shop Page (Public)
+**Route**: `/shop`
+**Access**: Public (no login required)
+
+**Features:**
+1. **Product Browsing**
+   - Grid layout with images
+   - Product cards with key info
+   - Featured product badges
+   - Stock availability indicators
+
+2. **Advanced Filtering**
+   - Search by name
+   - Filter by orchid type (multi-select)
+   - Filter by pot size
+   - Filter by care difficulty
+   - Price range slider
+
+3. **Sorting Options**
+   - Featured first
+   - Price: Low to High
+   - Price: High to Low
+   - Alphabetical
+
+4. **Product Details Modal**
+   - Full-screen product view
+   - Image gallery
+   - Complete specifications
+   - Care instructions
+   - Add to cart button
+
+5. **Shopping Cart**
+   - Side drawer interface
+   - Quantity adjustment
+   - Item removal
+   - Real-time total calculation
+   - Stock validation
+   - Checkout button
+
+6. **Responsive Design**
+   - Mobile-optimized
+   - Touch-friendly interface
+   - Collapsible filters on mobile
+
+### Data Model
+
+#### PreMadePot Entity
+```json
+{
+  "pot_id": "uuid",
+  "name_vi": "string",
+  "name_en": "string",
+  "description_vi": "string (long text)",
+  "description_en": "string (long text)",
+  "price": "number",
+  "stock_quantity": "number",
+  "images": ["string (URL)"],
+  "videos": ["string (URL)"],
+  "orchid_types": ["string"],
+  "pot_size": "SMALL|MEDIUM|LARGE|XLARGE",
+  "height_cm": "number",
+  "difficulty_level": "EASY|MEDIUM|HARD",
+  "care_instructions_vi": "string (long text)",
+  "care_instructions_en": "string (long text)",
+  "status": "ACTIVE|INACTIVE|OUT_OF_STOCK",
+  "featured": "boolean",
+  "created_at": "datetime",
+  "updated_at": "datetime"
+}
+```
+
+#### CartItem Entity (Frontend Only)
+```json
+{
+  "pot": "PreMadePot",
+  "quantity": "number"
+}
+```
+
+### Backend API Endpoints
+
+#### Pre-Made Pots Management
+```
+GET /api/premade-pots
+- List all pots with optional filters
+- Query params: status, featured, limit, offset
+
+GET /api/premade-pots/:id
+- Get single pot details
+
+POST /api/premade-pots
+- Create new pot
+- Requires: ADMIN or MANAGER role
+- Body: PreMadePot data
+
+PUT /api/premade-pots/:id
+- Update existing pot
+- Requires: ADMIN or MANAGER role
+- Body: Partial PreMadePot data
+
+DELETE /api/premade-pots/:id
+- Soft delete pot
+- Requires: ADMIN or MANAGER role
+
+PATCH /api/premade-pots/:id/stock
+- Update stock quantity only
+- Body: { quantity: number, operation: "SET|ADD|SUBTRACT" }
+```
+
+#### Customer Shopping
+```
+GET /api/shop/pots
+- Public endpoint for browsing
+- Filters: orchid_type, pot_size, difficulty, price_min, price_max
+- Returns: Only ACTIVE pots with stock > 0
+
+GET /api/shop/pots/:id
+- Public pot details endpoint
+
+POST /api/orders/premade
+- Create order from cart
+- Body: { cart_items: CartItem[], customer_info: CustomerInfo }
+```
+
+### Checkout Integration
+
+#### Two Checkout Flows
+1. **Custom Composition** (existing)
+   - Multi-step pot builder
+   - Orchid selection per pot
+   - Minimum 5 orchids per pot
+
+2. **Pre-Made Purchase** (new)
+   - Direct from shop cart
+   - No customization
+   - Minimum 1 pot
+   - Skip composition step
+
+#### Unified Checkout Process
+After cart, both flows converge:
+1. Customer Information
+2. Shipping Selection
+3. Order Review
+4. Payment (VietQR)
+5. Confirmation
+
+### UI/UX Specifications
+
+#### Shop Page Layout
+```
++------------------+
+| Header           |
++--------+---------+
+| Filter | Product |
+| Panel  | Grid    |
+|        | (3 cols)|
++--------+---------+
+```
+
+#### Product Card Design
+- 250x200px image area
+- Product name (1-2 lines)
+- Brief description (2 lines, truncated)
+- Price (large, bold)
+- Stock indicator
+- Orchid type badges
+- View Details button
+- Add to Cart button
+
+#### Cart Drawer Design
+- Slide from right
+- Full height
+- Fixed header with close button
+- Scrollable items list
+- Fixed footer with total and checkout
+
+### Business Rules
+
+#### Stock Management
+1. **Reserve on Add to Cart**
+   - No stock reservation
+   - Check stock on checkout
+   - First-come, first-served
+
+2. **Stock Deduction**
+   - Deduct on order CONFIRMED
+   - Return on order CANCELLED
+   - Update pre-made pot stock
+   - Don't affect catalog orchid stock
+
+3. **Low Stock Alerts**
+   - Alert when stock < 5
+   - Notify staff via notifications
+   - Consider hiding from shop
+
+#### Pricing
+1. **Fixed Price**
+   - No quantity discounts
+   - No customization fees
+   - Shipping calculated separately
+
+2. **Special Promotions (Future)**
+   - Seasonal discounts
+   - Bundle deals
+   - Loyalty program integration
+
+### Implementation Checklist
+
+#### Phase 1: Basic Feature
+- ✅ PreMadePots page (Admin/Manager)
+- ✅ Shop page (Public)
+- ✅ Shopping cart functionality
+- ✅ Product filtering and search
+- ✅ Bilingual support
+- ✅ Responsive design
+
+#### Phase 2: Enhanced Features
+- ⏳ Image upload integration
+- ⏳ Video embed support
+- ⏳ Advanced image gallery
+- ⏳ Customer reviews and ratings
+- ⏳ Wishlist functionality
+- ⏳ Share on social media
+
+#### Phase 3: Advanced Features
+- ⏳ Recommendation engine
+- ⏳ Related products
+- ⏳ Recently viewed
+- ⏳ Stock arrival notifications
+- ⏳ Pre-order for out-of-stock
+- ⏳ Gift wrapping options
+
+### Testing Scenarios
+
+#### Admin/Manager Tests
+1. Create pot with all fields
+2. Edit pot information
+3. Update stock quantity
+4. Mark pot as featured
+5. Change pot status
+6. Delete pot with confirmation
+7. Search and filter pots
+8. View pot analytics
+
+#### Customer Tests
+1. Browse shop without login
+2. Filter by orchid type
+3. Search by keyword
+4. View product details
+5. Add multiple items to cart
+6. Adjust quantities in cart
+7. Remove items from cart
+8. Checkout with cart items
+9. Receive order confirmation
+10. Track order status
+
+### Analytics and Reporting
+
+#### Key Metrics
+1. **Sales Metrics**
+   - Total revenue from pre-made pots
+   - Average order value
+   - Conversion rate
+   - Cart abandonment rate
+
+2. **Product Performance**
+   - Best-selling pots
+   - Low-performing pots
+   - Stock turnover rate
+   - Featured vs non-featured performance
+
+3. **Customer Behavior**
+   - Most searched terms
+   - Popular filters
+   - View-to-cart ratio
+   - Cart-to-order ratio
+
+---
+
+For detailed specifications of each module, refer to the full documentation sections above.
