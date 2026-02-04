@@ -3,14 +3,43 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppProvider } from "@/context/AppContext";
+import { AuthGuard } from "@/components/auth-guard";
 import NotFound from "@/pages/not-found";
+import LandingPage from "@/pages/landing";
+import LoginPage from "@/pages/login";
+import ShopPage from "@/pages/shop";
+import CheckoutPage from "@/pages/checkout";
+import TrackingPage from "@/pages/tracking";
+import DashboardPage from "@/pages/dashboard/index";
+import CatalogPage from "@/pages/dashboard/catalog";
+import OrdersPage from "@/pages/dashboard/orders";
+import CustomersPage from "@/pages/dashboard/customers";
+import TechniciansPage from "@/pages/dashboard/technicians";
+import PremadePotsPage from "@/pages/dashboard/premade-pots";
+
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  return (
+    <AuthGuard>
+      <Component />
+    </AuthGuard>
+  );
+}
 
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={LandingPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/shop" component={ShopPage} />
+      <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/tracking" component={TrackingPage} />
+      <Route path="/dashboard">{() => <ProtectedRoute component={DashboardPage} />}</Route>
+      <Route path="/dashboard/catalog">{() => <ProtectedRoute component={CatalogPage} />}</Route>
+      <Route path="/dashboard/orders">{() => <ProtectedRoute component={OrdersPage} />}</Route>
+      <Route path="/dashboard/customers">{() => <ProtectedRoute component={CustomersPage} />}</Route>
+      <Route path="/dashboard/technicians">{() => <ProtectedRoute component={TechniciansPage} />}</Route>
+      <Route path="/dashboard/premade-pots">{() => <ProtectedRoute component={PremadePotsPage} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -20,8 +49,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <AppProvider>
+          <Toaster />
+          <Router />
+        </AppProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -81,6 +81,30 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        success: {
+          DEFAULT: "hsl(142 76% 36% / <alpha-value>)",
+          foreground: "hsl(0 0% 98% / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "hsl(38 92% 50% / <alpha-value>)",
+          foreground: "hsl(0 0% 9% / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "hsl(217 91% 50% / <alpha-value>)",
+          foreground: "hsl(0 0% 98% / <alpha-value>)",
+        },
+        orchid: {
+          50: "hsl(271 81% 97% / <alpha-value>)",
+          100: "hsl(271 81% 94% / <alpha-value>)",
+          200: "hsl(271 81% 88% / <alpha-value>)",
+          300: "hsl(271 81% 76% / <alpha-value>)",
+          400: "hsl(271 81% 66% / <alpha-value>)",
+          500: "hsl(271 81% 56% / <alpha-value>)",
+          600: "hsl(271 81% 46% / <alpha-value>)",
+          700: "hsl(271 81% 36% / <alpha-value>)",
+          800: "hsl(271 81% 26% / <alpha-value>)",
+          900: "hsl(271 81% 16% / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
