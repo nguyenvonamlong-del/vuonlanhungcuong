@@ -4,6 +4,12 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Payment proof upload feature:
+  - Added file upload button for payment proof images (replaces URL input)
+  - Uses Replit Object Storage for secure file uploads
+  - Customers can upload images directly from their device
+  - Preview of uploaded image shown before order submission
+
 - **2026-02-04**: Order tracking and form improvements:
   - Added order tracking by phone number or email (shows active orders only)
   - District field is now optional in checkout form

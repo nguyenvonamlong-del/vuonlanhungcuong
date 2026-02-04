@@ -6,6 +6,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { z } from "zod";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 // Schema for public order creation with required payment proof
 // Matches actual frontend data structure for both premade and custom composition orders
@@ -63,6 +64,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       },
     })
   );
+
+  // Object storage routes for file uploads
+  registerObjectStorageRoutes(app);
 
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {

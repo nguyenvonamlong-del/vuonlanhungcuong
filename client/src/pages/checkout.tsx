@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import {
@@ -25,6 +25,7 @@ import { useApp } from "@/context/AppContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useUpload } from "@/hooks/use-upload";
 import type { CatalogItem, ShippingType, OrderPot, OrderOrchid } from "@shared/schema";
 
 interface CompositionPot {
@@ -81,6 +82,39 @@ export default function CheckoutPage() {
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; trackingToken: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { uploadFile, isUploading, progress } = useUpload({
+    onSuccess: (response) => {
+      setPaymentProofUrl(response.objectPath);
+      toast({
+        title: t("common.success", language),
+        description: language === "vi" ? "Tải ảnh lên thành công!" : "Image uploaded successfully!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: t("common.error", language),
+        description: language === "vi" ? "Không thể tải ảnh lên" : "Failed to upload image",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: t("common.error", language),
+          description: language === "vi" ? "Vui lòng chọn file ảnh" : "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      await uploadFile(file);
+    }
+  };
 
   const { data: catalogItems = [] } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
@@ -613,34 +647,73 @@ export default function CheckoutPage() {
                   <p>VUON LAN HUNG CUONG</p>
                 </div>
                 <Separator />
-                <div className="space-y-2">
-                  <Label htmlFor="paymentProof">
-                    {language === "vi" ? "Ảnh chứng từ thanh toán (URL)" : "Payment proof image (URL)"} *
+                <div className="space-y-3">
+                  <Label>
+                    {language === "vi" ? "Ảnh chứng từ thanh toán" : "Payment proof image"} *
                   </Label>
-                  <Input
-                    id="paymentProof"
-                    value={paymentProofUrl}
-                    onChange={(e) => setPaymentProofUrl(e.target.value)}
-                    placeholder={language === "vi" ? "Nhập URL ảnh chứng từ thanh toán" : "Enter payment proof image URL"}
-                    data-testid="input-payment-proof"
+                  
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    data-testid="input-payment-proof-file"
                   />
-                  {paymentProofUrl && (
-                    <div className="mt-2 p-2 border rounded-lg">
-                      <img 
-                        src={paymentProofUrl} 
-                        alt="Payment proof" 
-                        className="max-w-full h-auto max-h-48 mx-auto object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
+                  
+                  {!paymentProofUrl ? (
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {language === "vi" 
+                          ? "Tải ảnh chứng từ thanh toán của bạn"
+                          : "Upload your payment proof image"}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        data-testid="button-upload-payment-proof"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {language === "vi" ? `Đang tải... ${progress}%` : `Uploading... ${progress}%`}
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            {language === "vi" ? "Chọn ảnh" : "Select Image"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg p-3">
+                      <div className="relative">
+                        <img 
+                          src={paymentProofUrl} 
+                          alt="Payment proof" 
+                          className="max-w-full h-auto max-h-48 mx-auto object-contain rounded"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => setPaymentProofUrl("")}
+                          data-testid="button-remove-payment-proof"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 mt-2 text-sm text-green-600">
+                        <Check className="h-4 w-4" />
+                        {language === "vi" ? "Đã tải ảnh lên" : "Image uploaded"}
+                      </div>
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {language === "vi" 
-                      ? "Bạn có thể tải ảnh lên dịch vụ lưu trữ miễn phí như imgur.com và dán URL vào đây"
-                      : "You can upload image to free hosting like imgur.com and paste URL here"}
-                  </p>
                 </div>
               </CardContent>
             </Card>
