@@ -21,6 +21,12 @@ const publicOrderSchema = z.object({
   pots: z.array(z.object({
     potId: z.string().optional(),
     potName: z.string().optional(),
+    potTypeId: z.string().optional(),
+    potTypeName: z.string().optional(),
+    potTypePrice: z.number().nonnegative().optional(),
+    decorationTypeId: z.string().optional(),
+    decorationTypeName: z.string().optional(),
+    decorationTypePrice: z.number().nonnegative().optional(),
     orchids: z.array(z.object({
       catalogId: z.string().optional(),
       catalogItemId: z.string().optional(),
@@ -39,7 +45,10 @@ const publicOrderSchema = z.object({
   totalAmount: z.number().nonnegative(),
   depositAmount: z.number().nonnegative(),
   remainingAmount: z.number().nonnegative(),
-  paymentProofUrl: z.string().url("Valid payment proof URL is required"),
+  paymentProofUrl: z.string().min(1, "Payment proof is required").refine(
+    (val) => val.startsWith("http") || val.startsWith("/objects/"),
+    "Valid payment proof URL or upload path is required"
+  ),
   orderType: z.enum(["WEBSITE", "PREMADE"]).default("WEBSITE"),
 });
 
@@ -126,6 +135,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch catalog" });
+    }
+  });
+
+  // Pot Types
+  app.get("/api/pot-types", async (req, res) => {
+    try {
+      const types = await storage.getPotTypes();
+      res.json(types);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch pot types" });
+    }
+  });
+
+  // Decoration Types
+  app.get("/api/decoration-types", async (req, res) => {
+    try {
+      const types = await storage.getDecorationTypes();
+      res.json(types);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch decoration types" });
     }
   });
 

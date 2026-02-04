@@ -26,11 +26,15 @@ import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useUpload } from "@/hooks/use-upload";
-import type { CatalogItem, ShippingType, OrderPot, OrderOrchid } from "@shared/schema";
+import type { CatalogItem, ShippingType, OrderPot, OrderOrchid, PotType, DecorationType } from "@shared/schema";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 interface CompositionPot {
   id: string;
   name: string;
+  potTypeId?: string;
+  decorationTypeId?: string;
   orchids: {
     catalogId: string;
     speciesName: string;
@@ -121,6 +125,16 @@ export default function CheckoutPage() {
     enabled: !isPremadeMode,
   });
 
+  const { data: potTypes = [] } = useQuery<PotType[]>({
+    queryKey: ["/api/pot-types"],
+    enabled: !isPremadeMode,
+  });
+
+  const { data: decorationTypes = [] } = useQuery<DecorationType[]>({
+    queryKey: ["/api/decoration-types"],
+    enabled: !isPremadeMode,
+  });
+
   const { data: shippingTypes = [] } = useQuery<ShippingType[]>({
     queryKey: ["/api/shipping-types"],
   });
@@ -156,7 +170,14 @@ export default function CheckoutPage() {
   const calculateSubtotal = () => {
     if (isPremadeMode) return cartTotal;
     return pots.reduce((sum, pot) => {
-      return sum + pot.orchids.reduce((s, o) => s + o.quantity * o.pricePerUnit, 0);
+      const orchidTotal = pot.orchids.reduce((s, o) => s + o.quantity * o.pricePerUnit, 0);
+      const potTypePrice = pot.potTypeId 
+        ? parseFloat(potTypes.find(pt => pt.id === pot.potTypeId)?.price as string || "0") 
+        : 0;
+      const decorationPrice = pot.decorationTypeId 
+        ? parseFloat(decorationTypes.find(dt => dt.id === pot.decorationTypeId)?.price as string || "0") 
+        : 0;
+      return sum + orchidTotal + potTypePrice + decorationPrice;
     }, 0);
   };
 
@@ -204,7 +225,7 @@ export default function CheckoutPage() {
               catalogId: catalogItem.id,
               speciesName: language === "vi" ? catalogItem.speciesNameVi : catalogItem.speciesNameEn,
               color: catalogItem.color,
-              quantity: 1,
+              quantity: 5,
               pricePerUnit: parseFloat(catalogItem.pricePerUnit as string),
             },
           ],
@@ -261,19 +282,33 @@ export default function CheckoutPage() {
             orchids: [],
             potSubtotal: parseFloat(item.pot.price as string) * item.quantity,
           }))
-        : pots.map((pot) => ({
-            potId: pot.id,
-            potName: pot.name,
-            orchids: pot.orchids.map((o) => ({
-              catalogId: o.catalogId,
-              speciesName: o.speciesName,
-              color: o.color,
-              quantity: o.quantity,
-              pricePerUnit: o.pricePerUnit,
-              subtotal: o.quantity * o.pricePerUnit,
-            })),
-            potSubtotal: pot.orchids.reduce((sum, o) => sum + o.quantity * o.pricePerUnit, 0),
-          }));
+        : pots.map((pot) => {
+            const potType = pot.potTypeId ? potTypes.find(pt => pt.id === pot.potTypeId) : null;
+            const decorationType = pot.decorationTypeId ? decorationTypes.find(dt => dt.id === pot.decorationTypeId) : null;
+            const orchidTotal = pot.orchids.reduce((sum, o) => sum + o.quantity * o.pricePerUnit, 0);
+            const potTypePrice = potType ? parseFloat(potType.price as string) : 0;
+            const decorationPrice = decorationType ? parseFloat(decorationType.price as string) : 0;
+            
+            return {
+              potId: pot.id,
+              potName: pot.name,
+              potTypeId: pot.potTypeId,
+              potTypeName: potType ? (language === "vi" ? potType.nameVi : potType.nameEn) : undefined,
+              potTypePrice: potTypePrice || undefined,
+              decorationTypeId: pot.decorationTypeId,
+              decorationTypeName: decorationType ? (language === "vi" ? decorationType.nameVi : decorationType.nameEn) : undefined,
+              decorationTypePrice: decorationPrice || undefined,
+              orchids: pot.orchids.map((o) => ({
+                catalogId: o.catalogId,
+                speciesName: o.speciesName,
+                color: o.color,
+                quantity: o.quantity,
+                pricePerUnit: o.pricePerUnit,
+                subtotal: o.quantity * o.pricePerUnit,
+              })),
+              potSubtotal: orchidTotal + potTypePrice + decorationPrice,
+            };
+          });
 
       createOrderMutation.mutate({
         customerName: customerInfo.fullName,
@@ -318,6 +353,15 @@ export default function CheckoutPage() {
               </Button>
             </div>
 
+            <Alert className="border-primary/50 bg-primary/5">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                {language === "vi" 
+                  ? "Mỗi chậu cần tối thiểu 5 cành lan. Bạn có thể kết hợp nhiều loại lan khác nhau (ví dụ: 2 cành loại A + 3 cành loại B) hoặc chọn 5 cành cùng loại."
+                  : "Each pot requires a minimum of 5 orchid stems. You can combine different orchid types (e.g., 2 type A + 3 type B) or choose 5 of the same type."}
+              </AlertDescription>
+            </Alert>
+
             {pots.map((pot, potIndex) => {
               const potTotal = pot.orchids.reduce((sum, o) => sum + o.quantity * o.pricePerUnit, 0);
               const potCount = pot.orchids.reduce((sum, o) => sum + o.quantity, 0);
@@ -353,21 +397,78 @@ export default function CheckoutPage() {
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <Select onValueChange={(id) => {
-                      const item = activeItems.find((i) => i.id === id);
-                      if (item) addOrchidToPot(pot.id, item);
-                    }}>
-                      <SelectTrigger data-testid={`select-add-orchid-${potIndex}`}>
-                        <SelectValue placeholder={t("checkout.selectOrchid", language)} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeItems.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color} ({formatCurrency(item.pricePerUnit, language)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          {language === "vi" ? "Loại chậu" : "Pot Type"}
+                        </Label>
+                        <Select 
+                          value={pot.potTypeId || ""} 
+                          onValueChange={(id) => {
+                            setPots(pots.map(p => p.id === pot.id ? { ...p, potTypeId: id } : p));
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-pot-type-${potIndex}`}>
+                            <SelectValue placeholder={language === "vi" ? "Chọn loại chậu" : "Select pot type"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {potTypes.map((pt) => (
+                              <SelectItem key={pt.id} value={pt.id}>
+                                {language === "vi" ? pt.nameVi : pt.nameEn} 
+                                {parseFloat(pt.price as string) > 0 && ` (+${formatCurrency(pt.price, language)})`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          {language === "vi" ? "Loại trang trí" : "Decoration Type"}
+                        </Label>
+                        <Select 
+                          value={pot.decorationTypeId || ""} 
+                          onValueChange={(id) => {
+                            setPots(pots.map(p => p.id === pot.id ? { ...p, decorationTypeId: id } : p));
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-decoration-type-${potIndex}`}>
+                            <SelectValue placeholder={language === "vi" ? "Chọn trang trí" : "Select decoration"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {decorationTypes.map((dt) => (
+                              <SelectItem key={dt.id} value={dt.id}>
+                                {language === "vi" ? dt.nameVi : dt.nameEn}
+                                {parseFloat(dt.price as string) > 0 && ` (+${formatCurrency(dt.price, language)})`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label className="text-sm">
+                        {language === "vi" ? "Chọn lan cho chậu" : "Select orchids for pot"}
+                      </Label>
+                      <Select onValueChange={(id) => {
+                        const item = activeItems.find((i) => i.id === id);
+                        if (item) addOrchidToPot(pot.id, item);
+                      }}>
+                        <SelectTrigger data-testid={`select-add-orchid-${potIndex}`}>
+                          <SelectValue placeholder={t("checkout.selectOrchid", language)} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeItems.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color} ({formatCurrency(item.pricePerUnit, language)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     {pot.orchids.length > 0 && (
                       <div className="space-y-2">

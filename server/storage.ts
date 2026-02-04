@@ -3,6 +3,8 @@ import { eq, desc, sql, and, gte, lte, or, ilike, count, sum } from "drizzle-orm
 import {
   users,
   catalogItems,
+  potTypes,
+  decorationTypes,
   premadePots,
   customers,
   technicians,
@@ -14,6 +16,8 @@ import {
   type InsertUser,
   type CatalogItem,
   type InsertCatalogItem,
+  type PotType,
+  type DecorationType,
   type PremadePot,
   type InsertPremadePot,
   type Customer,
@@ -43,6 +47,12 @@ export interface IStorage {
   createCatalogItem(item: InsertCatalogItem): Promise<CatalogItem>;
   updateCatalogItem(id: string, item: Partial<InsertCatalogItem>): Promise<CatalogItem | undefined>;
   deleteCatalogItem(id: string): Promise<boolean>;
+  
+  // Pot Types
+  getPotTypes(): Promise<PotType[]>;
+  
+  // Decoration Types
+  getDecorationTypes(): Promise<DecorationType[]>;
   
   // Premade Pots
   getPremadePots(): Promise<PremadePot[]>;
@@ -135,6 +145,16 @@ export class DatabaseStorage implements IStorage {
   async deleteCatalogItem(id: string): Promise<boolean> {
     const result = await db.delete(catalogItems).where(eq(catalogItems.id, id));
     return true;
+  }
+
+  // Pot Types
+  async getPotTypes(): Promise<PotType[]> {
+    return db.select().from(potTypes).where(eq(potTypes.status, "ACTIVE"));
+  }
+
+  // Decoration Types
+  async getDecorationTypes(): Promise<DecorationType[]> {
+    return db.select().from(decorationTypes).where(eq(decorationTypes.status, "ACTIVE"));
   }
 
   // Premade Pots

@@ -4,6 +4,13 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Pot composition enhancements:
+  - Added pot type selection per pot (e.g., ceramic, terracotta, cement pots)
+  - Added decoration type selection per pot (e.g., pebbles, moss, bark chips)
+  - Default orchid quantity is now 5 stems (minimum requirement)
+  - Added visible info alert about minimum 5 stems requirement
+  - Pot type and decoration type prices are included in subtotal calculation
+
 - **2026-02-04**: Payment proof upload feature:
   - Added file upload button for payment proof images (replaces URL input)
   - Uses Replit Object Storage for secure file uploads

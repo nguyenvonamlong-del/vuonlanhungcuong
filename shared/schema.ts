@@ -46,6 +46,46 @@ export const insertCatalogItemSchema = createInsertSchema(catalogItems).omit({
 export type InsertCatalogItem = z.infer<typeof insertCatalogItemSchema>;
 export type CatalogItem = typeof catalogItems.$inferSelect;
 
+// ==================== POT TYPES ====================
+export const potTypes = pgTable("pot_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nameVi: text("name_vi").notNull(),
+  nameEn: text("name_en").notNull(),
+  descriptionVi: text("description_vi"),
+  descriptionEn: text("description_en"),
+  price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
+  imageUrl: text("image_url"),
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPotTypeSchema = createInsertSchema(potTypes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPotType = z.infer<typeof insertPotTypeSchema>;
+export type PotType = typeof potTypes.$inferSelect;
+
+// ==================== DECORATION TYPES ====================
+export const decorationTypes = pgTable("decoration_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nameVi: text("name_vi").notNull(),
+  nameEn: text("name_en").notNull(),
+  descriptionVi: text("description_vi"),
+  descriptionEn: text("description_en"),
+  price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
+  imageUrl: text("image_url"),
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDecorationTypeSchema = createInsertSchema(decorationTypes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDecorationType = z.infer<typeof insertDecorationTypeSchema>;
+export type DecorationType = typeof decorationTypes.$inferSelect;
+
 // ==================== CUSTOMERS ====================
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -138,6 +178,12 @@ export interface OrderOrchid {
 export interface OrderPot {
   potId: string;
   potName: string;
+  potTypeId?: string;
+  potTypeName?: string;
+  potTypePrice?: number;
+  decorationTypeId?: string;
+  decorationTypeName?: string;
+  decorationTypePrice?: number;
   orchids: OrderOrchid[];
   potSubtotal: number;
 }
