@@ -288,6 +288,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Track active orders by phone or email
+  app.get("/api/orders/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({ error: "Search query is required" });
+      }
+      const activeOrders = await storage.getActiveOrdersByPhoneOrEmail(q.trim());
+      res.json(activeOrders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to search orders" });
+    }
+  });
+
   app.post("/api/orders", async (req, res) => {
     try {
       // Validate request body with Zod schema

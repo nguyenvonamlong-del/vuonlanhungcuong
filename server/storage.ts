@@ -241,6 +241,19 @@ export class DatabaseStorage implements IStorage {
     return order;
   }
 
+  async getActiveOrdersByPhoneOrEmail(phoneOrEmail: string): Promise<Order[]> {
+    const activeStatuses = ["PENDING", "CONFIRMED", "PREPARING", "READY", "SHIPPING"];
+    return db.select().from(orders)
+      .where(and(
+        or(
+          eq(orders.customerPhone, phoneOrEmail),
+          eq(orders.customerEmail, phoneOrEmail)
+        ),
+        sql`${orders.status} = ANY(${activeStatuses})`
+      ))
+      .orderBy(desc(orders.createdAt));
+  }
+
   async createOrder(order: InsertOrder): Promise<Order> {
     const orderNumber = await this.generateOrderNumber();
     const trackingToken = await this.generateTrackingToken();
