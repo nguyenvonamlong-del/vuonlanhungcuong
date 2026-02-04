@@ -4,6 +4,12 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Order tracking and form improvements:
+  - Added order tracking by phone number or email (shows active orders only)
+  - District field is now optional in checkout form
+  - Fixed product card layout on shop page (buttons no longer cut off)
+  - Address display gracefully handles missing district field
+  
 - **2026-02-04**: Tax system and payment proof features:
   - Added configurable tax system with admin toggle and percentage (0-100%)
   - Tax calculated on (subtotal + shipping cost) when enabled
@@ -56,7 +62,7 @@ A comprehensive orchid sales web application with multi-language support (Vietna
 - **Landing Page**: Hero section, features, testimonials, CTA
 - **Shop**: Browse pre-made orchid pots with filtering/sorting
 - **Checkout**: 5-step process with composition builder or cart checkout
-- **Order Tracking**: Track orders by token number
+- **Order Tracking**: Track orders by token, phone number, or email
 
 #### Staff Features
 - **Dashboard**: Revenue charts, order statistics, recent orders
