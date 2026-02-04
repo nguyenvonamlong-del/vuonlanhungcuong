@@ -571,12 +571,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userType = (req.session as any)?.user?.role === "ADMIN" ? "ADMIN" : "CUSTOMER";
       const userId = (req.session as any)?.user?.id;
-      const sessionId = (req as any).sessionID || randomUUID();
+      // Use express sessionID - it's always available and persists via cookie
+      const sessionId = req.sessionID;
+      
+      // Mark session as touched to ensure it's saved
+      (req.session as any).chatActive = true;
       
       const conversation = await getOrCreateConversation(sessionId, userType, userId);
       const messages = await getChatMessages(conversation.id);
       
-      res.json({ conversation, messages });
+      // Include sessionId in response for debugging
+      res.json({ conversation, messages, sessionId });
     } catch (error) {
       console.error("Error getting chat session:", error);
       res.status(500).json({ error: "Failed to get chat session" });
@@ -598,7 +603,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Conversation not found" });
       }
       
-      const currentSessionId = (req as any).sessionID;
+      const currentSessionId = req.sessionID;
       const currentUserId = (req.session as any)?.user?.id;
       const isAdmin = (req.session as any)?.user?.role === "ADMIN";
       
@@ -664,7 +669,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Conversation not found" });
       }
       
-      const currentSessionId = (req as any).sessionID;
+      const currentSessionId = req.sessionID;
       const currentUserId = (req.session as any)?.user?.id;
       
       // Verify ownership
