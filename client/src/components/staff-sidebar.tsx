@@ -8,6 +8,8 @@ import {
   Settings,
   LogOut,
   Package,
+  Building2,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,9 +42,11 @@ export function StaffSidebar() {
   const managementItems = [
     { href: "/dashboard/customers", label: t("nav.customers", language), icon: Users },
     { href: "/dashboard/technicians", label: t("nav.technicians", language), icon: Wrench },
+    { href: "/dashboard/suppliers", label: language === "vi" ? "Nhà cung cấp" : "Suppliers", icon: Building2 },
   ];
 
   const adminItems = user?.role === "ADMIN" ? [
+    { href: "/dashboard/audit-log", label: language === "vi" ? "Nhật ký" : "Audit Log", icon: History },
     { href: "/dashboard/settings", label: language === "vi" ? "Cài đặt" : "Settings", icon: Settings },
   ] : [];
 

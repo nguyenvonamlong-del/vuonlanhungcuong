@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,9 +20,11 @@ import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CatalogItem, InsertCatalogItem } from "@shared/schema";
+import type { CatalogItem, InsertCatalogItem, PotType, DecorationType, ShippingType, PaymentType } from "@shared/schema";
 
-const initialFormData: InsertCatalogItem = {
+type CatalogTab = "orchid" | "pot" | "decoration" | "shipping" | "payment";
+
+const initialOrchidForm: InsertCatalogItem = {
   speciesNameVi: "",
   speciesNameEn: "",
   color: "",
@@ -35,84 +38,225 @@ const initialFormData: InsertCatalogItem = {
   status: "ACTIVE",
 };
 
+interface GenericFormData {
+  nameVi: string;
+  nameEn: string;
+  descriptionVi?: string;
+  descriptionEn?: string;
+  price?: string;
+  imageUrl?: string;
+  status: string;
+  baseCost?: string;
+  estimatedDays?: number;
+  type?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+  qrCodeUrl?: string;
+  instructions?: string;
+}
+
+const initialGenericForm: GenericFormData = {
+  nameVi: "",
+  nameEn: "",
+  descriptionVi: "",
+  descriptionEn: "",
+  price: "0",
+  imageUrl: "",
+  status: "ACTIVE",
+  baseCost: "0",
+  estimatedDays: 3,
+  type: "BANK_TRANSFER",
+  bankName: "",
+  accountNumber: "",
+  accountName: "",
+  qrCodeUrl: "",
+  instructions: "",
+};
+
 export default function CatalogPage() {
   const { language } = useApp();
   const { openChatbot } = useChatbot();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<CatalogTab>("orchid");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
-  const [formData, setFormData] = useState<InsertCatalogItem>(initialFormData);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingItem, setDeletingItem] = useState<CatalogItem | null>(null);
+  
+  const [orchidDialogOpen, setOrchidDialogOpen] = useState(false);
+  const [editingOrchid, setEditingOrchid] = useState<CatalogItem | null>(null);
+  const [orchidForm, setOrchidForm] = useState<InsertCatalogItem>(initialOrchidForm);
+  const [deleteOrchidDialogOpen, setDeleteOrchidDialogOpen] = useState(false);
+  const [deletingOrchid, setDeletingOrchid] = useState<CatalogItem | null>(null);
+  
+  const [genericDialogOpen, setGenericDialogOpen] = useState(false);
+  const [editingGeneric, setEditingGeneric] = useState<any | null>(null);
+  const [genericForm, setGenericForm] = useState<GenericFormData>(initialGenericForm);
+  const [deleteGenericDialogOpen, setDeleteGenericDialogOpen] = useState(false);
+  const [deletingGeneric, setDeletingGeneric] = useState<any | null>(null);
+  const [genericDialogType, setGenericDialogType] = useState<CatalogTab>("pot");
 
-  const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
+  const { data: catalogItems = [], isLoading: loadingOrchids } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
   });
 
-  const createMutation = useMutation({
+  const { data: potTypes = [], isLoading: loadingPots } = useQuery<PotType[]>({
+    queryKey: ["/api/pot-types"],
+  });
+
+  const { data: decorationTypes = [], isLoading: loadingDecorations } = useQuery<DecorationType[]>({
+    queryKey: ["/api/decoration-types"],
+  });
+
+  const { data: shippingTypes = [], isLoading: loadingShipping } = useQuery<ShippingType[]>({
+    queryKey: ["/api/shipping"],
+  });
+
+  const { data: paymentTypes = [], isLoading: loadingPayments } = useQuery<PaymentType[]>({
+    queryKey: ["/api/payment-types"],
+  });
+
+  const createOrchidMutation = useMutation({
     mutationFn: async (data: InsertCatalogItem) => {
       const response = await apiRequest("POST", "/api/catalog", data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
-      setDialogOpen(false);
-      setFormData(initialFormData);
+      setOrchidDialogOpen(false);
+      setOrchidForm(initialOrchidForm);
       toast({
         title: t("common.success", language),
-        description: language === "vi" ? "Đã thêm sản phẩm mới" : "Product added successfully",
+        description: language === "vi" ? "Đã thêm loại lan mới" : "Orchid type added successfully",
       });
     },
   });
 
-  const updateMutation = useMutation({
+  const updateOrchidMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: InsertCatalogItem }) => {
       const response = await apiRequest("PATCH", `/api/catalog/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
-      setDialogOpen(false);
-      setEditingItem(null);
-      setFormData(initialFormData);
+      setOrchidDialogOpen(false);
+      setEditingOrchid(null);
+      setOrchidForm(initialOrchidForm);
       toast({
         title: t("common.success", language),
-        description: language === "vi" ? "Đã cập nhật sản phẩm" : "Product updated successfully",
+        description: language === "vi" ? "Đã cập nhật loại lan" : "Orchid type updated successfully",
       });
     },
   });
 
-  const deleteMutation = useMutation({
+  const deleteOrchidMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await apiRequest("DELETE", `/api/catalog/${id}`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
-      setDeleteDialogOpen(false);
-      setDeletingItem(null);
+      setDeleteOrchidDialogOpen(false);
+      setDeletingOrchid(null);
       toast({
         title: t("common.success", language),
-        description: language === "vi" ? "Đã xóa sản phẩm" : "Product deleted successfully",
+        description: language === "vi" ? "Đã xóa loại lan" : "Orchid type deleted successfully",
       });
     },
   });
 
-  const filteredItems = catalogItems.filter((item) => {
+  const getApiEndpoint = (type: CatalogTab) => {
+    switch (type) {
+      case "pot": return "/api/pot-types";
+      case "decoration": return "/api/decoration-types";
+      case "shipping": return "/api/shipping";
+      case "payment": return "/api/payment-types";
+      default: return "";
+    }
+  };
+
+  const createGenericMutation = useMutation({
+    mutationFn: async ({ type, data }: { type: CatalogTab; data: any }) => {
+      const response = await apiRequest("POST", getApiEndpoint(type), data);
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [getApiEndpoint(variables.type)] });
+      setGenericDialogOpen(false);
+      setGenericForm(initialGenericForm);
+      toast({
+        title: t("common.success", language),
+        description: language === "vi" ? "Đã thêm mục mới" : "Item added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "vi" ? "Lỗi" : "Error",
+        description: language === "vi" ? "Không thể thêm mục" : "Failed to add item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateGenericMutation = useMutation({
+    mutationFn: async ({ type, id, data }: { type: CatalogTab; id: string; data: any }) => {
+      const response = await apiRequest("PUT", `${getApiEndpoint(type)}/${id}`, data);
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [getApiEndpoint(variables.type)] });
+      setGenericDialogOpen(false);
+      setEditingGeneric(null);
+      setGenericForm(initialGenericForm);
+      toast({
+        title: t("common.success", language),
+        description: language === "vi" ? "Đã cập nhật mục" : "Item updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "vi" ? "Lỗi" : "Error",
+        description: language === "vi" ? "Không thể cập nhật mục" : "Failed to update item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteGenericMutation = useMutation({
+    mutationFn: async ({ type, id }: { type: CatalogTab; id: string }) => {
+      const response = await apiRequest("DELETE", `${getApiEndpoint(type)}/${id}`);
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [getApiEndpoint(variables.type)] });
+      setDeleteGenericDialogOpen(false);
+      setDeletingGeneric(null);
+      toast({
+        title: t("common.success", language),
+        description: language === "vi" ? "Đã xóa mục" : "Item deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "vi" ? "Lỗi" : "Error",
+        description: language === "vi" ? "Không thể xóa mục" : "Failed to delete item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredOrchids = catalogItems.filter((item) => {
     const name = language === "vi" ? item.speciesNameVi : item.speciesNameEn;
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const openCreate = () => {
-    setEditingItem(null);
-    setFormData(initialFormData);
-    setDialogOpen(true);
+  const openOrchidCreate = () => {
+    setEditingOrchid(null);
+    setOrchidForm(initialOrchidForm);
+    setOrchidDialogOpen(true);
   };
 
-  const openEdit = (item: CatalogItem) => {
-    setEditingItem(item);
-    setFormData({
+  const openOrchidEdit = (item: CatalogItem) => {
+    setEditingOrchid(item);
+    setOrchidForm({
       speciesNameVi: item.speciesNameVi,
       speciesNameEn: item.speciesNameEn,
       color: item.color,
@@ -125,21 +269,280 @@ export default function CatalogPage() {
       imageUrl: item.imageUrl || "",
       status: item.status,
     });
-    setDialogOpen(true);
+    setOrchidDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleOrchidSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data: formData });
+    if (editingOrchid) {
+      updateOrchidMutation.mutate({ id: editingOrchid.id, data: orchidForm });
     } else {
-      createMutation.mutate(formData);
+      createOrchidMutation.mutate(orchidForm);
+    }
+  };
+
+  const openGenericCreate = (type: CatalogTab) => {
+    setGenericDialogType(type);
+    setEditingGeneric(null);
+    setGenericForm(initialGenericForm);
+    setGenericDialogOpen(true);
+  };
+
+  const openGenericEdit = (type: CatalogTab, item: any) => {
+    setGenericDialogType(type);
+    setEditingGeneric(item);
+    setGenericForm({
+      nameVi: item.nameVi || "",
+      nameEn: item.nameEn || "",
+      descriptionVi: item.descriptionVi || "",
+      descriptionEn: item.descriptionEn || "",
+      price: String(item.price || item.baseCost || "0"),
+      imageUrl: item.imageUrl || "",
+      status: item.status || "ACTIVE",
+      baseCost: String(item.baseCost || "0"),
+      estimatedDays: item.estimatedDays || 3,
+      type: item.type || "BANK_TRANSFER",
+      bankName: item.bankName || "",
+      accountNumber: item.accountNumber || "",
+      accountName: item.accountName || "",
+      qrCodeUrl: item.qrCodeUrl || "",
+      instructions: item.instructions || "",
+    });
+    setGenericDialogOpen(true);
+  };
+
+  const handleGenericSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    let data: any = {};
+    
+    if (genericDialogType === "pot" || genericDialogType === "decoration") {
+      data = {
+        nameVi: genericForm.nameVi,
+        nameEn: genericForm.nameEn,
+        descriptionVi: genericForm.descriptionVi,
+        descriptionEn: genericForm.descriptionEn,
+        price: genericForm.price,
+        imageUrl: genericForm.imageUrl,
+        status: genericForm.status,
+      };
+    } else if (genericDialogType === "shipping") {
+      data = {
+        nameVi: genericForm.nameVi,
+        nameEn: genericForm.nameEn,
+        descriptionVi: genericForm.descriptionVi,
+        descriptionEn: genericForm.descriptionEn,
+        baseCost: genericForm.baseCost,
+        estimatedDays: genericForm.estimatedDays,
+        status: genericForm.status,
+      };
+    } else if (genericDialogType === "payment") {
+      data = {
+        nameVi: genericForm.nameVi,
+        nameEn: genericForm.nameEn,
+        descriptionVi: genericForm.descriptionVi,
+        descriptionEn: genericForm.descriptionEn,
+        type: genericForm.type,
+        bankName: genericForm.bankName,
+        accountNumber: genericForm.accountNumber,
+        accountName: genericForm.accountName,
+        qrCodeUrl: genericForm.qrCodeUrl,
+        instructions: genericForm.instructions,
+        status: genericForm.status,
+      };
+    }
+    
+    if (editingGeneric) {
+      updateGenericMutation.mutate({ type: genericDialogType, id: editingGeneric.id, data });
+    } else {
+      createGenericMutation.mutate({ type: genericDialogType, data });
+    }
+  };
+
+  const getTabLabel = (tab: CatalogTab): string => {
+    switch (tab) {
+      case "orchid": return language === "vi" ? "Loại Lan" : "Orchid Types";
+      case "pot": return language === "vi" ? "Loại Chậu" : "Pot Types";
+      case "decoration": return language === "vi" ? "Trang Trí" : "Decorations";
+      case "shipping": return language === "vi" ? "Vận Chuyển" : "Shipping";
+      case "payment": return language === "vi" ? "Thanh Toán" : "Payment";
+    }
+  };
+
+  const getAddLabel = (tab: CatalogTab): string => {
+    switch (tab) {
+      case "orchid": return language === "vi" ? "Thêm Loại Lan" : "Add Orchid Type";
+      case "pot": return language === "vi" ? "Thêm Loại Chậu" : "Add Pot Type";
+      case "decoration": return language === "vi" ? "Thêm Trang Trí" : "Add Decoration";
+      case "shipping": return language === "vi" ? "Thêm Phí Ship" : "Add Shipping";
+      case "payment": return language === "vi" ? "Thêm Phương Thức" : "Add Payment Method";
     }
   };
 
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
+  };
+
+  const renderOrchidTable = () => (
+    <Card>
+      <CardContent className="p-0">
+        {loadingOrchids ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : filteredOrchids.length === 0 ? (
+          <div className="text-center py-12">
+            <Flower2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">{t("catalog.noItems", language)}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("catalog.species", language)}</TableHead>
+                  <TableHead>{t("catalog.color", language)}</TableHead>
+                  <TableHead className="text-right">{t("catalog.height", language)}</TableHead>
+                  <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
+                  <TableHead className="text-right">{t("catalog.stock", language)}</TableHead>
+                  <TableHead>{t("catalog.status", language)}</TableHead>
+                  <TableHead className="text-right">{t("catalog.actions", language)}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrchids.map((item) => (
+                  <TableRow key={item.id} data-testid={`row-catalog-${item.id}`}>
+                    <TableCell className="font-medium">
+                      {language === "vi" ? item.speciesNameVi : item.speciesNameEn}
+                    </TableCell>
+                    <TableCell>{item.color}</TableCell>
+                    <TableCell className="text-right">{item.heightCm} cm</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.pricePerUnit, language)}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={item.stockQuantity < 50 ? "text-destructive font-medium" : ""}>
+                        {item.stockQuantity}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openOrchidEdit(item)} data-testid={`button-edit-${item.id}`}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => { setDeletingOrchid(item); setDeleteOrchidDialogOpen(true); }}
+                          data-testid={`button-delete-${item.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderGenericTable = (items: any[], loading: boolean, type: CatalogTab) => {
+    const Icon = type === "pot" ? Package : type === "decoration" ? Palette : type === "shipping" ? Truck : CreditCard;
+    
+    return (
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="text-center py-12">
+              <Icon className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">{language === "vi" ? "Chưa có dữ liệu" : "No items found"}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
+                    <TableHead>{language === "vi" ? "Mô tả" : "Description"}</TableHead>
+                    {(type === "pot" || type === "decoration") && (
+                      <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
+                    )}
+                    {type === "shipping" && (
+                      <>
+                        <TableHead className="text-right">{language === "vi" ? "Phí" : "Cost"}</TableHead>
+                        <TableHead className="text-right">{language === "vi" ? "Số ngày" : "Days"}</TableHead>
+                      </>
+                    )}
+                    {type === "payment" && (
+                      <TableHead>{language === "vi" ? "Loại" : "Type"}</TableHead>
+                    )}
+                    <TableHead>{t("catalog.status", language)}</TableHead>
+                    <TableHead className="text-right">{t("catalog.actions", language)}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((item) => (
+                    <TableRow key={item.id} data-testid={`row-${type}-${item.id}`}>
+                      <TableCell className="font-medium">
+                        {language === "vi" ? item.nameVi : item.nameEn}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {language === "vi" ? item.descriptionVi : item.descriptionEn}
+                      </TableCell>
+                      {(type === "pot" || type === "decoration") && (
+                        <TableCell className="text-right">{formatCurrency(item.price, language)}</TableCell>
+                      )}
+                      {type === "shipping" && (
+                        <>
+                          <TableCell className="text-right">{formatCurrency(item.baseCost, language)}</TableCell>
+                          <TableCell className="text-right">{item.estimatedDays} {language === "vi" ? "ngày" : "days"}</TableCell>
+                        </>
+                      )}
+                      {type === "payment" && (
+                        <TableCell>{item.type}</TableCell>
+                      )}
+                      <TableCell>
+                        <StatusBadge status={item.status} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openGenericEdit(type, item)} data-testid={`button-edit-${type}-${item.id}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => { setDeletingGeneric({ ...item, type }); setDeleteGenericDialogOpen(true); }}
+                            data-testid={`button-delete-${type}-${item.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -153,12 +556,7 @@ export default function CatalogPage() {
               <h1 className="font-semibold">{t("catalog.title", language)}</h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={openChatbot}
-                data-testid="button-header-chatbot"
-              >
+              <Button variant="ghost" size="icon" onClick={openChatbot} data-testid="button-header-chatbot">
                 <MessageCircle className="h-5 w-5" />
               </Button>
               <LanguageToggle />
@@ -167,117 +565,93 @@ export default function CatalogPage() {
           </header>
 
           <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("common.search", language) + "..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search"
-                />
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CatalogTab)}>
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                <TabsList className="h-auto flex-wrap">
+                  <TabsTrigger value="orchid" className="gap-2" data-testid="tab-orchid">
+                    <Flower2 className="h-4 w-4" />
+                    {getTabLabel("orchid")}
+                  </TabsTrigger>
+                  <TabsTrigger value="pot" className="gap-2" data-testid="tab-pot">
+                    <Package className="h-4 w-4" />
+                    {getTabLabel("pot")}
+                  </TabsTrigger>
+                  <TabsTrigger value="decoration" className="gap-2" data-testid="tab-decoration">
+                    <Palette className="h-4 w-4" />
+                    {getTabLabel("decoration")}
+                  </TabsTrigger>
+                  <TabsTrigger value="shipping" className="gap-2" data-testid="tab-shipping">
+                    <Truck className="h-4 w-4" />
+                    {getTabLabel("shipping")}
+                  </TabsTrigger>
+                  <TabsTrigger value="payment" className="gap-2" data-testid="tab-payment">
+                    <CreditCard className="h-4 w-4" />
+                    {getTabLabel("payment")}
+                  </TabsTrigger>
+                </TabsList>
+                <Button
+                  onClick={() => activeTab === "orchid" ? openOrchidCreate() : openGenericCreate(activeTab)}
+                  data-testid="button-add-item"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {getAddLabel(activeTab)}
+                </Button>
               </div>
-              <Button onClick={openCreate} data-testid="button-add-catalog">
-                <Plus className="h-4 w-4 mr-2" />
-                {t("catalog.addNew", language)}
-              </Button>
-            </div>
 
-            <Card>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-4 space-y-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
+              {activeTab === "orchid" && (
+                <div className="mt-4">
+                  <div className="relative max-w-md mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t("common.search", language) + "..."}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-search"
+                    />
                   </div>
-                ) : filteredItems.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Flower2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">{t("catalog.noItems", language)}</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t("catalog.species", language)}</TableHead>
-                          <TableHead>{t("catalog.color", language)}</TableHead>
-                          <TableHead className="text-right">{t("catalog.height", language)}</TableHead>
-                          <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
-                          <TableHead className="text-right">{t("catalog.stock", language)}</TableHead>
-                          <TableHead>{t("catalog.status", language)}</TableHead>
-                          <TableHead className="text-right">{t("catalog.actions", language)}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredItems.map((item) => (
-                          <TableRow key={item.id} data-testid={`row-catalog-${item.id}`}>
-                            <TableCell className="font-medium">
-                              {language === "vi" ? item.speciesNameVi : item.speciesNameEn}
-                            </TableCell>
-                            <TableCell>{item.color}</TableCell>
-                            <TableCell className="text-right">{item.heightCm} cm</TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.pricePerUnit, language)}</TableCell>
-                            <TableCell className="text-right">
-                              <span className={item.stockQuantity < 50 ? "text-destructive font-medium" : ""}>
-                                {item.stockQuantity}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={item.status} />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEdit(item)}
-                                  data-testid={`button-edit-${item.id}`}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive"
-                                  onClick={() => {
-                                    setDeletingItem(item);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                  data-testid={`button-delete-${item.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              )}
+
+              <TabsContent value="orchid" className="mt-4">
+                {renderOrchidTable()}
+              </TabsContent>
+
+              <TabsContent value="pot" className="mt-4">
+                {renderGenericTable(potTypes, loadingPots, "pot")}
+              </TabsContent>
+
+              <TabsContent value="decoration" className="mt-4">
+                {renderGenericTable(decorationTypes, loadingDecorations, "decoration")}
+              </TabsContent>
+
+              <TabsContent value="shipping" className="mt-4">
+                {renderGenericTable(shippingTypes, loadingShipping, "shipping")}
+              </TabsContent>
+
+              <TabsContent value="payment" className="mt-4">
+                {renderGenericTable(paymentTypes, loadingPayments, "payment")}
+              </TabsContent>
+            </Tabs>
           </main>
         </SidebarInset>
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Orchid Dialog */}
+      <Dialog open={orchidDialogOpen} onOpenChange={setOrchidDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingItem ? t("catalog.edit", language) : t("catalog.addNew", language)}
+              {editingOrchid ? (language === "vi" ? "Sửa Loại Lan" : "Edit Orchid Type") : (language === "vi" ? "Thêm Loại Lan" : "Add Orchid Type")}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleOrchidSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("catalog.species", language)} (VI)</Label>
                 <Input
-                  value={formData.speciesNameVi}
-                  onChange={(e) => setFormData({ ...formData, speciesNameVi: e.target.value })}
+                  value={orchidForm.speciesNameVi}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, speciesNameVi: e.target.value })}
                   required
                   data-testid="input-speciesNameVi"
                 />
@@ -285,8 +659,8 @@ export default function CatalogPage() {
               <div className="space-y-2">
                 <Label>{t("catalog.species", language)} (EN)</Label>
                 <Input
-                  value={formData.speciesNameEn}
-                  onChange={(e) => setFormData({ ...formData, speciesNameEn: e.target.value })}
+                  value={orchidForm.speciesNameEn}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, speciesNameEn: e.target.value })}
                   required
                   data-testid="input-speciesNameEn"
                 />
@@ -296,8 +670,8 @@ export default function CatalogPage() {
               <div className="space-y-2">
                 <Label>{t("catalog.color", language)}</Label>
                 <Input
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  value={orchidForm.color}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, color: e.target.value })}
                   required
                   data-testid="input-color"
                 />
@@ -306,8 +680,8 @@ export default function CatalogPage() {
                 <Label>{t("catalog.height", language)} (cm)</Label>
                 <Input
                   type="number"
-                  value={formData.heightCm}
-                  onChange={(e) => setFormData({ ...formData, heightCm: parseInt(e.target.value) || 0 })}
+                  value={orchidForm.heightCm}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, heightCm: parseInt(e.target.value) || 0 })}
                   required
                   data-testid="input-height"
                 />
@@ -318,8 +692,8 @@ export default function CatalogPage() {
                 <Label>{t("catalog.price", language)}</Label>
                 <Input
                   type="number"
-                  value={formData.pricePerUnit}
-                  onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })}
+                  value={orchidForm.pricePerUnit}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, pricePerUnit: e.target.value })}
                   required
                   data-testid="input-price"
                 />
@@ -328,18 +702,15 @@ export default function CatalogPage() {
                 <Label>{t("catalog.stock", language)}</Label>
                 <Input
                   type="number"
-                  value={formData.stockQuantity}
-                  onChange={(e) => setFormData({ ...formData, stockQuantity: parseInt(e.target.value) || 0 })}
+                  value={orchidForm.stockQuantity}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, stockQuantity: parseInt(e.target.value) || 0 })}
                   required
                   data-testid="input-stock"
                 />
               </div>
               <div className="space-y-2">
                 <Label>{t("catalog.status", language)}</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(v) => setFormData({ ...formData, status: v })}
-                >
+                <Select value={orchidForm.status} onValueChange={(v) => setOrchidForm({ ...orchidForm, status: v })}>
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
                   </SelectTrigger>
@@ -352,14 +723,10 @@ export default function CatalogPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOrchidDialogOpen(false)}>
                 {t("common.cancel", language)}
               </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-                data-testid="button-save-catalog"
-              >
+              <Button type="submit" disabled={createOrchidMutation.isPending || updateOrchidMutation.isPending} data-testid="button-save-orchid">
                 {t("common.save", language)}
               </Button>
             </DialogFooter>
@@ -367,25 +734,191 @@ export default function CatalogPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Generic Dialog for Pot/Decoration/Shipping/Payment */}
+      <Dialog open={genericDialogOpen} onOpenChange={setGenericDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingGeneric ? (language === "vi" ? "Sửa" : "Edit") : getAddLabel(genericDialogType)}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleGenericSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Tên (VI)" : "Name (VI)"}</Label>
+                <Input
+                  value={genericForm.nameVi}
+                  onChange={(e) => setGenericForm({ ...genericForm, nameVi: e.target.value })}
+                  required
+                  data-testid="input-nameVi"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Tên (EN)" : "Name (EN)"}</Label>
+                <Input
+                  value={genericForm.nameEn}
+                  onChange={(e) => setGenericForm({ ...genericForm, nameEn: e.target.value })}
+                  required
+                  data-testid="input-nameEn"
+                />
+              </div>
+            </div>
+
+            {(genericDialogType === "pot" || genericDialogType === "decoration") && (
+              <div className="space-y-2">
+                <Label>{t("catalog.price", language)}</Label>
+                <Input
+                  type="number"
+                  value={genericForm.price}
+                  onChange={(e) => setGenericForm({ ...genericForm, price: e.target.value })}
+                  required
+                  data-testid="input-price"
+                />
+              </div>
+            )}
+
+            {genericDialogType === "shipping" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Phí vận chuyển" : "Shipping cost"}</Label>
+                  <Input
+                    type="number"
+                    value={genericForm.baseCost}
+                    onChange={(e) => setGenericForm({ ...genericForm, baseCost: e.target.value })}
+                    required
+                    data-testid="input-baseCost"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Số ngày giao" : "Estimated days"}</Label>
+                  <Input
+                    type="number"
+                    value={genericForm.estimatedDays}
+                    onChange={(e) => setGenericForm({ ...genericForm, estimatedDays: parseInt(e.target.value) || 3 })}
+                    required
+                    data-testid="input-estimatedDays"
+                  />
+                </div>
+              </div>
+            )}
+
+            {genericDialogType === "payment" && (
+              <>
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Loại thanh toán" : "Payment type"}</Label>
+                  <Select value={genericForm.type} onValueChange={(v) => setGenericForm({ ...genericForm, type: v })}>
+                    <SelectTrigger data-testid="select-paymentType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BANK_TRANSFER">{language === "vi" ? "Chuyển khoản" : "Bank Transfer"}</SelectItem>
+                      <SelectItem value="CASH">{language === "vi" ? "Tiền mặt" : "Cash"}</SelectItem>
+                      <SelectItem value="MOMO">MoMo</SelectItem>
+                      <SelectItem value="ZALO_PAY">ZaloPay</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Tên ngân hàng" : "Bank name"}</Label>
+                    <Input
+                      value={genericForm.bankName}
+                      onChange={(e) => setGenericForm({ ...genericForm, bankName: e.target.value })}
+                      data-testid="input-bankName"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Số tài khoản" : "Account number"}</Label>
+                    <Input
+                      value={genericForm.accountNumber}
+                      onChange={(e) => setGenericForm({ ...genericForm, accountNumber: e.target.value })}
+                      data-testid="input-accountNumber"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Tên chủ tài khoản" : "Account holder"}</Label>
+                  <Input
+                    value={genericForm.accountName}
+                    onChange={(e) => setGenericForm({ ...genericForm, accountName: e.target.value })}
+                    data-testid="input-accountName"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <Label>{t("catalog.status", language)}</Label>
+              <Select value={genericForm.status} onValueChange={(v) => setGenericForm({ ...genericForm, status: v })}>
+                <SelectTrigger data-testid="select-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">{t("catalog.active", language)}</SelectItem>
+                  <SelectItem value="INACTIVE">{t("catalog.inactive", language)}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setGenericDialogOpen(false)}>
+                {t("common.cancel", language)}
+              </Button>
+              <Button type="submit" disabled={createGenericMutation.isPending || updateGenericMutation.isPending} data-testid="button-save-generic">
+                {t("common.save", language)}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Orchid Dialog */}
+      <Dialog open={deleteOrchidDialogOpen} onOpenChange={setDeleteOrchidDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("common.confirm", language)}</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground">
             {language === "vi"
-              ? `Bạn có chắc chắn muốn xóa "${deletingItem?.speciesNameVi}"?`
-              : `Are you sure you want to delete "${deletingItem?.speciesNameEn}"?`}
+              ? `Bạn có chắc chắn muốn xóa "${deletingOrchid?.speciesNameVi}"?`
+              : `Are you sure you want to delete "${deletingOrchid?.speciesNameEn}"?`}
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDeleteOrchidDialogOpen(false)}>
               {t("common.cancel", language)}
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deletingItem && deleteMutation.mutate(deletingItem.id)}
-              disabled={deleteMutation.isPending}
+              onClick={() => deletingOrchid && deleteOrchidMutation.mutate(deletingOrchid.id)}
+              disabled={deleteOrchidMutation.isPending}
               data-testid="button-confirm-delete"
+            >
+              {t("common.delete", language)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Generic Dialog */}
+      <Dialog open={deleteGenericDialogOpen} onOpenChange={setDeleteGenericDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("common.confirm", language)}</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            {language === "vi"
+              ? `Bạn có chắc chắn muốn xóa "${deletingGeneric?.nameVi}"?`
+              : `Are you sure you want to delete "${deletingGeneric?.nameEn}"?`}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteGenericDialogOpen(false)}>
+              {t("common.cancel", language)}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingGeneric && deleteGenericMutation.mutate({ type: deletingGeneric.type, id: deletingGeneric.id })}
+              disabled={deleteGenericMutation.isPending}
+              data-testid="button-confirm-delete-generic"
             >
               {t("common.delete", language)}
             </Button>
