@@ -26,6 +26,7 @@ import NotificationsPage from "@/pages/dashboard/notifications";
 import ReportsPage from "@/pages/dashboard/reports";
 import AuditLogPage from "@/pages/dashboard/audit-log";
 import SettingsPage from "@/pages/dashboard/settings";
+import UsersPage from "@/pages/dashboard/users";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return (
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/dashboard/reports">{() => <ProtectedRoute component={ReportsPage} />}</Route>
       <Route path="/dashboard/audit-log">{() => <ProtectedRoute component={AuditLogPage} />}</Route>
       <Route path="/dashboard/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
+      <Route path="/dashboard/users">{() => <ProtectedRoute component={UsersPage} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

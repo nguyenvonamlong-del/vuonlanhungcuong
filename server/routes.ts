@@ -1159,6 +1159,120 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ==================== USERS MANAGEMENT ====================
+  app.get("/api/users", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      // Check if user is admin
+      const currentUser = await storage.getUserById((req.session as any).userId);
+      if (!currentUser || currentUser.role !== "ADMIN") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const items = await storage.getUsers();
+      // Remove passwords from response
+      const safeUsers = items.map(({ password, ...rest }) => rest);
+      res.json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const currentUser = await storage.getUserById((req.session as any).userId);
+      if (!currentUser || currentUser.role !== "ADMIN") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      // Check if username already exists
+      const existing = await storage.getUserByUsername(req.body.username);
+      if (existing) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+      const item = await storage.createUser(req.body);
+      const { password, ...safeUser } = item;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const currentUser = await storage.getUserById((req.session as any).userId);
+      if (!currentUser || currentUser.role !== "ADMIN") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      // Don't allow changing own account status
+      if (req.params.id === (req.session as any).userId && req.body.status) {
+        return res.status(400).json({ error: "Cannot change your own status" });
+      }
+      const item = await storage.updateUser(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password, ...safeUser } = item;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const currentUser = await storage.getUserById((req.session as any).userId);
+      if (!currentUser || currentUser.role !== "ADMIN") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      // Don't allow deleting own account
+      if (req.params.id === (req.session as any).userId) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+      await storage.deleteUser(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  app.patch("/api/users/:id/status", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const currentUser = await storage.getUserById((req.session as any).userId);
+      if (!currentUser || currentUser.role !== "ADMIN") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      // Don't allow changing own account status
+      if (req.params.id === (req.session as any).userId) {
+        return res.status(400).json({ error: "Cannot change your own status" });
+      }
+      const { status } = req.body;
+      if (!["ACTIVE", "INACTIVE"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const item = await storage.updateUser(req.params.id, { status });
+      if (!item) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password, ...safeUser } = item;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+
   // Update order priority
   app.patch("/api/orders/:id/priority", async (req, res) => {
     try {

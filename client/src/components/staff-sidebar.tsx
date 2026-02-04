@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Bell,
   BarChart3,
+  UserCog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,7 @@ export function StaffSidebar() {
   ];
 
   const adminItems = user?.role === "ADMIN" ? [
+    { href: "/dashboard/users", label: language === "vi" ? "Người dùng" : "Users", icon: UserCog },
     { href: "/dashboard/reports", label: language === "vi" ? "Báo cáo" : "Reports", icon: BarChart3 },
     { href: "/dashboard/notifications", label: language === "vi" ? "Thông báo" : "Notifications", icon: Bell },
     { href: "/dashboard/audit-log", label: language === "vi" ? "Nhật ký" : "Audit Log", icon: History },
