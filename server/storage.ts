@@ -57,9 +57,12 @@ import { v4 as uuidv4 } from "uuid";
 
 export interface IStorage {
   // Users
+  getUsers(): Promise<User[]>;
   getUserById(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   
   // Catalog
   getCatalogItems(): Promise<CatalogItem[]>;
@@ -193,6 +196,20 @@ export class DatabaseStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const [created] = await db.insert(users).values({ ...user, id: uuidv4() }).returning();
     return created;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined> {
+    const [updated] = await db.update(users).set(user).where(eq(users.id, id)).returning();
+    return updated;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return true;
   }
 
   // Catalog

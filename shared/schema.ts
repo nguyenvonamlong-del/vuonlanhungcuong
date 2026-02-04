@@ -119,6 +119,7 @@ export type Customer = typeof customers.$inferSelect;
 // ==================== TECHNICIANS ====================
 export const technicians = pgTable("technicians", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
   fullName: text("full_name").notNull(),
   phoneNumber: text("phone_number").notNull(),
   specialization: text("specialization").array(),
