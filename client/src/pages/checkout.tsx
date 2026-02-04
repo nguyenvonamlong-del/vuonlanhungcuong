@@ -517,7 +517,7 @@ export default function CheckoutPage() {
                 <p><span className="text-muted-foreground">{t("form.fullName", language)}:</span> {customerInfo.fullName}</p>
                 <p><span className="text-muted-foreground">{t("form.phone", language)}:</span> {customerInfo.phoneNumber}</p>
                 {customerInfo.email && <p><span className="text-muted-foreground">{t("form.email", language)}:</span> {customerInfo.email}</p>}
-                <p><span className="text-muted-foreground">{t("form.address", language)}:</span> {customerInfo.streetAddress}, {customerInfo.ward}, {customerInfo.district}, {customerInfo.province}</p>
+                <p><span className="text-muted-foreground">{t("form.address", language)}:</span> {[customerInfo.streetAddress, customerInfo.ward, customerInfo.district, customerInfo.province].filter(Boolean).join(", ")}</p>
               </CardContent>
             </Card>
 

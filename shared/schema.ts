@@ -105,7 +105,7 @@ export const orders = pgTable("orders", {
   customerPhone: text("customer_phone").notNull(),
   customerEmail: text("customer_email"),
   province: text("province").notNull(),
-  district: text("district").notNull(),
+  district: text("district"),
   ward: text("ward").notNull(),
   streetAddress: text("street_address").notNull(),
   pots: jsonb("pots").notNull().$type<OrderPot[]>(),

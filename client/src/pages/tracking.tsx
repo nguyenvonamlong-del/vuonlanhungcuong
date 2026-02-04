@@ -46,12 +46,12 @@ export default function TrackingPage() {
   }, [tokenFromUrl]);
 
   const { data: order, isLoading, error } = useQuery<Order>({
-    queryKey: ["/api/orders/track", searchToken],
+    queryKey: [`/api/orders/track/${searchToken}`],
     enabled: !!searchToken && searchMode === "token",
   });
 
   const { data: activeOrders = [], isLoading: isLoadingOrders, error: ordersError } = useQuery<Order[]>({
-    queryKey: ["/api/orders/search", searchContact],
+    queryKey: [`/api/orders/search?q=${encodeURIComponent(searchContact)}`],
     enabled: !!searchContact && searchMode === "contact",
   });
 
@@ -317,7 +317,7 @@ export default function TrackingPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">{t("form.address", language)}</p>
                     <p className="font-medium">
-                      {displayOrder.streetAddress}, {displayOrder.ward}, {displayOrder.district}, {displayOrder.province}
+                      {[displayOrder.streetAddress, displayOrder.ward, displayOrder.district, displayOrder.province].filter(Boolean).join(", ")}
                     </p>
                   </div>
 
