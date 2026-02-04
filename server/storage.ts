@@ -9,6 +9,7 @@ import {
   orders,
   shippingTypes,
   activities,
+  settings,
   type User,
   type InsertUser,
   type CatalogItem,
@@ -25,6 +26,7 @@ import {
   type InsertShippingType,
   type Activity,
   type InsertActivity,
+  type Settings,
   type DashboardStats,
 } from "@shared/schema";
 import { v4 as uuidv4 } from "uuid";
@@ -82,6 +84,11 @@ export interface IStorage {
   // Activities
   getActivities(limit?: number): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
+  
+  // Settings
+  getSetting(key: string): Promise<Settings | undefined>;
+  getAllSettings(): Promise<Settings[]>;
+  updateSetting(key: string, value: string): Promise<Settings | undefined>;
   
   // Utility
   generateOrderNumber(): Promise<string>;
@@ -351,6 +358,25 @@ export class DatabaseStorage implements IStorage {
       token += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return token;
+  }
+
+  // Settings
+  async getSetting(key: string): Promise<Settings | undefined> {
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+    return setting;
+  }
+
+  async getAllSettings(): Promise<Settings[]> {
+    return db.select().from(settings);
+  }
+
+  async updateSetting(key: string, value: string): Promise<Settings | undefined> {
+    const [updated] = await db
+      .update(settings)
+      .set({ value, updatedAt: new Date() })
+      .where(eq(settings.key, key))
+      .returning();
+    return updated;
   }
 }
 

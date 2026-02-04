@@ -157,7 +157,7 @@ export default function LandingPage() {
                     <Flower2 className="h-12 w-12 text-primary" />
                   </div>
                   <p className="font-semibold text-lg">
-                    {language === "vi" ? "Vườn Lan Hưng Cường" : "Orchid Garden"}
+                    {language === "vi" ? "Vườn Lan Hùng Cường" : "Orchid Garden"}
                   </p>
                 </div>
               </div>

@@ -5,6 +5,42 @@ import { insertCatalogItemSchema, insertPremadePotSchema, insertTechnicianSchema
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import { z } from "zod";
+
+// Schema for public order creation with required payment proof
+// Matches actual frontend data structure for both premade and custom composition orders
+const publicOrderSchema = z.object({
+  customerName: z.string().min(1, "Customer name is required"),
+  customerPhone: z.string().regex(/^0\d{9,10}$/, "Invalid phone number format"),
+  customerEmail: z.string().email().optional().or(z.literal("")).or(z.undefined()),
+  province: z.string().min(1, "Province is required"),
+  district: z.string().optional().default(""),
+  ward: z.string().min(1, "Ward is required"),
+  streetAddress: z.string().min(1, "Street address is required"),
+  pots: z.array(z.object({
+    potId: z.string().optional(),
+    potName: z.string().optional(),
+    orchids: z.array(z.object({
+      catalogId: z.string().optional(),
+      catalogItemId: z.string().optional(),
+      speciesName: z.string().optional(),
+      name: z.string().optional(),
+      color: z.string().optional(),
+      quantity: z.number().int().positive(),
+      pricePerUnit: z.number().nonnegative(),
+      subtotal: z.number().nonnegative().optional(),
+    })).optional().default([]),
+    potSubtotal: z.number().nonnegative(),
+  })).min(1, "Order must contain at least one pot"),
+  subtotal: z.number().nonnegative(),
+  shippingCost: z.number().nonnegative(),
+  taxAmount: z.number().nonnegative().optional(),
+  totalAmount: z.number().nonnegative(),
+  depositAmount: z.number().nonnegative(),
+  remainingAmount: z.number().nonnegative(),
+  paymentProofUrl: z.string().url("Valid payment proof URL is required"),
+  orderType: z.enum(["WEBSITE", "PREMADE"]).default("WEBSITE"),
+});
 
 const PgSession = connectPgSimple(session);
 
@@ -254,7 +290,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/orders", async (req, res) => {
     try {
-      const { customerName, customerPhone, customerEmail, province, district, ward, streetAddress, pots, subtotal, shippingCost, totalAmount, depositAmount, remainingAmount, orderType } = req.body;
+      // Validate request body with Zod schema
+      const parseResult = publicOrderSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        const firstError = parseResult.error.errors[0];
+        return res.status(400).json({ error: firstError.message });
+      }
+      
+      const { customerName, customerPhone, customerEmail, province, district, ward, streetAddress, pots, subtotal, shippingCost, paymentProofUrl, orderType } = parseResult.data;
+      
+      // Fetch tax settings and recalculate tax server-side to prevent tampering
+      const taxEnabledSetting = await storage.getSetting("tax_enabled");
+      const taxPercentageSetting = await storage.getSetting("tax_percentage");
+      const isTaxEnabled = taxEnabledSetting?.value === "true";
+      const taxPercentage = parseFloat(taxPercentageSetting?.value || "0");
+      
+      // Recalculate tax and total on server side (using validated values from Zod)
+      const serverTaxAmount = isTaxEnabled ? Math.ceil((subtotal + shippingCost) * taxPercentage / 100) : 0;
+      const serverTotal = subtotal + shippingCost + serverTaxAmount;
+      const serverDeposit = Math.ceil(serverTotal / 2);
+      const serverRemaining = serverTotal - serverDeposit;
       
       // Find or create customer
       let customer = await storage.getCustomerByPhone(customerPhone);
@@ -277,27 +332,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         customerId: customer.id,
         customerName,
         customerPhone,
-        customerEmail,
+        customerEmail: customerEmail || undefined,
         province,
-        district,
+        district: district || "",
         ward,
         streetAddress,
         pots,
         subtotal: String(subtotal),
         shippingCost: String(shippingCost),
-        totalAmount: String(totalAmount),
-        depositAmount: String(depositAmount),
-        remainingAmount: String(remainingAmount),
-        orderType: orderType || "WEBSITE",
+        taxAmount: String(serverTaxAmount),
+        totalAmount: String(serverTotal),
+        depositAmount: String(serverDeposit),
+        remainingAmount: String(serverRemaining),
+        paymentProofUrl,
+        orderType,
         status: "PENDING",
         depositPaid: false,
         remainingPaid: false,
       });
       
-      // Update customer stats
+      // Update customer stats (use server-computed total to prevent tampering)
       await storage.updateCustomer(customer.id, {
         totalOrders: customer.totalOrders + 1,
-        totalSpent: String(Number(customer.totalSpent) + totalAmount),
+        totalSpent: String(Number(customer.totalSpent) + serverTotal),
       });
       
       res.status(201).json({
@@ -390,6 +447,71 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("Dashboard stats error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Settings routes
+  app.get("/api/settings", async (req, res) => {
+    try {
+      const allSettings = await storage.getAllSettings();
+      const settingsMap: Record<string, string> = {};
+      allSettings.forEach(s => { settingsMap[s.key] = s.value; });
+      res.json(settingsMap);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.get("/api/settings/:key", async (req, res) => {
+    try {
+      const setting = await storage.getSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch setting" });
+    }
+  });
+
+  app.put("/api/settings/:key", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const user = await storage.getUserById(req.session.userId);
+    if (!user || user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    
+    try {
+      const { key } = req.params;
+      const { value } = req.body;
+      
+      // Validate known settings keys and their value formats
+      const allowedKeys = ["tax_enabled", "tax_percentage"];
+      if (!allowedKeys.includes(key)) {
+        return res.status(400).json({ error: "Invalid setting key" });
+      }
+      
+      // Validate value format based on key
+      if (key === "tax_enabled") {
+        if (value !== "true" && value !== "false") {
+          return res.status(400).json({ error: "tax_enabled must be 'true' or 'false'" });
+        }
+      } else if (key === "tax_percentage") {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+          return res.status(400).json({ error: "tax_percentage must be a number between 0 and 100" });
+        }
+      }
+      
+      const updated = await storage.updateSetting(key, value);
+      if (!updated) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update setting" });
     }
   });
 }

@@ -42,6 +42,10 @@ export function StaffSidebar() {
     { href: "/dashboard/technicians", label: t("nav.technicians", language), icon: Wrench },
   ];
 
+  const adminItems = user?.role === "ADMIN" ? [
+    { href: "/dashboard/settings", label: language === "vi" ? "Cài đặt" : "Settings", icon: Settings },
+  ] : [];
+
   const isActive = (href: string) => {
     if (href === "/dashboard") return location === "/dashboard";
     return location.startsWith(href);
@@ -91,6 +95,31 @@ export function StaffSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {managementItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.href)}
+                    >
+                      <Link href={item.href} data-testid={`link-sidebar-${item.href.replace("/dashboard/", "")}`}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {adminItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              {language === "vi" ? "Hệ thống" : "System"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild

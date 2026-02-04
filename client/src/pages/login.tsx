@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Flower2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,14 @@ export default function LoginPage() {
               <p><span className="font-medium">Manager:</span> manager / manager123</p>
               <p><span className="font-medium">Employee:</span> employee / employee123</p>
             </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link href="/">
+              <Button variant="ghost" className="text-muted-foreground" data-testid="link-back-home">
+                {language === "vi" ? "← Quay lại trang chủ" : "← Back to Homepage"}
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

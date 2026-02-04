@@ -4,6 +4,14 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Tax system and payment proof features:
+  - Added configurable tax system with admin toggle and percentage (0-100%)
+  - Tax calculated on (subtotal + shipping cost) when enabled
+  - Settings management page for admin users (/dashboard/settings)
+  - Payment proof URL required before order placement (customer uploads to imgur or similar)
+  - Server-side validation for payment proof and tax calculation to prevent tampering
+  - Settings API with admin-only write access and value validation
+  
 - **2024-02-04**: Complete MVP implementation including:
   - Full PostgreSQL database schema with all entities
   - Multi-language support (Vietnamese/English) throughout
@@ -67,9 +75,11 @@ A comprehensive orchid sales web application with multi-language support (Vietna
 - `POST /api/auth/login` - Staff authentication
 - `GET /api/catalog` - List catalog items
 - `GET /api/shop/pots` - Public shop products
-- `POST /api/orders` - Create new order
+- `POST /api/orders` - Create new order (requires paymentProofUrl for website orders)
 - `GET /api/orders/track/:token` - Track order by token
 - `GET /api/dashboard/stats` - Dashboard statistics
+- `GET /api/settings` - Get all settings (public)
+- `PUT /api/settings/:key` - Update setting (admin only, validates key/value)
 
 ### Database Schema
 - **users**: Staff accounts with roles (ADMIN, MANAGER, EMPLOYEE)
@@ -77,9 +87,10 @@ A comprehensive orchid sales web application with multi-language support (Vietna
 - **premadePots**: Pre-made pot products
 - **customers**: Customer information
 - **technicians**: Technician assignments
-- **orders**: Order records with pots/orchids JSON
+- **orders**: Order records with pots/orchids JSON, taxAmount, paymentProofUrl
 - **shippingTypes**: Shipping options
 - **activities**: Activity log
+- **settings**: System settings (tax_enabled, tax_percentage)
 
 ### Running the Project
 ```bash

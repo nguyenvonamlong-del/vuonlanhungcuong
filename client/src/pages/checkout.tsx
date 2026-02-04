@@ -11,6 +11,8 @@ import {
   Copy,
   Loader2,
   ShoppingBag,
+  Upload,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +80,7 @@ export default function CheckoutPage() {
   const [selectedShipping, setSelectedShipping] = useState<string>("");
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; trackingToken: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [paymentProofUrl, setPaymentProofUrl] = useState<string>("");
 
   const { data: catalogItems = [] } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
@@ -87,6 +90,13 @@ export default function CheckoutPage() {
   const { data: shippingTypes = [] } = useQuery<ShippingType[]>({
     queryKey: ["/api/shipping-types"],
   });
+
+  const { data: appSettings = {} } = useQuery<Record<string, string>>({
+    queryKey: ["/api/settings"],
+  });
+
+  const taxEnabled = appSettings.tax_enabled === "true";
+  const taxPercentage = parseFloat(appSettings.tax_percentage || "0");
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -119,7 +129,8 @@ export default function CheckoutPage() {
   const subtotal = calculateSubtotal();
   const selectedShippingType = shippingTypes.find((s) => s.id === selectedShipping);
   const shippingCost = selectedShippingType ? parseFloat(selectedShippingType.baseCost as string) : 0;
-  const total = subtotal + shippingCost;
+  const taxAmount = taxEnabled ? Math.ceil((subtotal + shippingCost) * taxPercentage / 100) : 0;
+  const total = subtotal + shippingCost + taxAmount;
   const deposit = Math.ceil(total / 2);
   const remaining = total - deposit;
 
@@ -195,12 +206,13 @@ export default function CheckoutPage() {
           customerInfo.fullName &&
           /^0\d{9,10}$/.test(customerInfo.phoneNumber) &&
           customerInfo.province &&
-          customerInfo.district &&
           customerInfo.ward &&
           customerInfo.streetAddress
         );
       case 2:
         return !!selectedShipping;
+      case 3:
+        return !!paymentProofUrl;
       default:
         return true;
     }
@@ -234,15 +246,17 @@ export default function CheckoutPage() {
         customerPhone: customerInfo.phoneNumber,
         customerEmail: customerInfo.email || undefined,
         province: customerInfo.province,
-        district: customerInfo.district,
+        district: customerInfo.district || "",
         ward: customerInfo.ward,
         streetAddress: customerInfo.streetAddress,
         pots: orderPots,
         subtotal,
         shippingCost,
+        taxAmount: taxAmount || undefined,
         totalAmount: total,
         depositAmount: deposit,
         remainingAmount: remaining,
+        paymentProofUrl: paymentProofUrl || undefined,
         orderType: isPremadeMode ? "PREMADE" : "WEBSITE",
       });
     } else {
@@ -413,11 +427,12 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="district">{t("form.district", language)} *</Label>
+                    <Label htmlFor="district">{t("form.district", language)}</Label>
                     <Input
                       id="district"
                       value={customerInfo.district}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, district: e.target.value })}
+                      placeholder={language === "vi" ? "(Không bắt buộc)" : "(Optional)"}
                       data-testid="input-district"
                     />
                   </div>
@@ -549,6 +564,12 @@ export default function CheckoutPage() {
                     <span>{t("checkout.shipping", language)}</span>
                     <span>{formatCurrency(shippingCost, language)}</span>
                   </div>
+                  {taxEnabled && (
+                    <div className="flex justify-between text-sm">
+                      <span>{language === "vi" ? `Thuế (${taxPercentage}%)` : `Tax (${taxPercentage}%)`}</span>
+                      <span>{formatCurrency(taxAmount, language)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                     <span>{t("checkout.total", language)}</span>
                     <span className="text-primary">{formatCurrency(total, language)}</span>
@@ -563,6 +584,63 @@ export default function CheckoutPage() {
                     <span>{t("checkout.remaining", language)}</span>
                     <span>{formatCurrency(remaining, language)}</span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === "vi" ? "Thanh toán tiền cọc" : "Pay Deposit"}</CardTitle>
+                <CardDescription>
+                  {language === "vi" 
+                    ? "Quét mã QR hoặc chuyển khoản để thanh toán tiền cọc, sau đó nhập link ảnh chứng từ thanh toán"
+                    : "Scan QR code or transfer to pay deposit, then enter the payment proof image URL"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-lg">
+                    <img 
+                      src={`https://img.vietqr.io/image/VCB-1234567890-compact2.jpg?amount=${deposit}&addInfo=ORCHID%20DEPOSIT&accountName=VUON%20LAN%20HUNG%20CUONG`} 
+                      alt="VietQR Payment" 
+                      className="w-48 h-48 object-contain" 
+                    />
+                  </div>
+                </div>
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>{language === "vi" ? "Số tiền cọc:" : "Deposit amount:"} <strong>{formatCurrency(deposit, language)}</strong></p>
+                  <p>Vietcombank (VCB) - 1234567890</p>
+                  <p>VUON LAN HUNG CUONG</p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label htmlFor="paymentProof">
+                    {language === "vi" ? "Ảnh chứng từ thanh toán (URL)" : "Payment proof image (URL)"} *
+                  </Label>
+                  <Input
+                    id="paymentProof"
+                    value={paymentProofUrl}
+                    onChange={(e) => setPaymentProofUrl(e.target.value)}
+                    placeholder={language === "vi" ? "Nhập URL ảnh chứng từ thanh toán" : "Enter payment proof image URL"}
+                    data-testid="input-payment-proof"
+                  />
+                  {paymentProofUrl && (
+                    <div className="mt-2 p-2 border rounded-lg">
+                      <img 
+                        src={paymentProofUrl} 
+                        alt="Payment proof" 
+                        className="max-w-full h-auto max-h-48 mx-auto object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {language === "vi" 
+                      ? "Bạn có thể tải ảnh lên dịch vụ lưu trữ miễn phí như imgur.com và dán URL vào đây"
+                      : "You can upload image to free hosting like imgur.com and paste URL here"}
+                  </p>
                 </div>
               </CardContent>
             </Card>

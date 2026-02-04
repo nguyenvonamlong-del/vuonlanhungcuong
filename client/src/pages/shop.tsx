@@ -224,17 +224,17 @@ export default function ShopPage() {
                         {formatCurrency(pot.price, language)}
                       </div>
                     </CardContent>
-                    <CardFooter className="p-4 pt-0 flex gap-2">
+                    <CardFooter className="p-4 pt-0 flex flex-col gap-2">
                       <Button
                         variant="outline"
-                        className="flex-1"
+                        className="w-full"
                         onClick={() => setSelectedPot(pot)}
                         data-testid={`button-view-${pot.id}`}
                       >
                         {t("shop.viewDetails", language)}
                       </Button>
                       <Button
-                        className="flex-1 gap-2"
+                        className="w-full gap-2"
                         disabled={pot.stockQuantity <= 0}
                         onClick={() => handleAddToCart(pot)}
                         data-testid={`button-add-cart-${pot.id}`}

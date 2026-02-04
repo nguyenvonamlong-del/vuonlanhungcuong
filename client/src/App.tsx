@@ -17,6 +17,7 @@ import OrdersPage from "@/pages/dashboard/orders";
 import CustomersPage from "@/pages/dashboard/customers";
 import TechniciansPage from "@/pages/dashboard/technicians";
 import PremadePotsPage from "@/pages/dashboard/premade-pots";
+import SettingsPage from "@/pages/dashboard/settings";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/dashboard/customers">{() => <ProtectedRoute component={CustomersPage} />}</Route>
       <Route path="/dashboard/technicians">{() => <ProtectedRoute component={TechniciansPage} />}</Route>
       <Route path="/dashboard/premade-pots">{() => <ProtectedRoute component={PremadePotsPage} />}</Route>
+      <Route path="/dashboard/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

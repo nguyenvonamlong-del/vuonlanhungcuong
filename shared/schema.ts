@@ -119,6 +119,8 @@ export const orders = pgTable("orders", {
   trackingToken: varchar("tracking_token").notNull().unique(),
   notes: text("notes"),
   cancelReason: text("cancel_reason"),
+  paymentProofUrl: text("payment_proof_url"),
+  taxAmount: decimal("tax_amount", { precision: 15, scale: 0 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -196,6 +198,21 @@ export const insertShippingTypeSchema = createInsertSchema(shippingTypes).omit({
 export type InsertShippingType = z.infer<typeof insertShippingTypeSchema>;
 export type ShippingType = typeof shippingTypes.$inferSelect;
 
+// ==================== SETTINGS ====================
+export const settings = pgTable("settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSettingsSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type Settings = typeof settings.$inferSelect;
+
 // ==================== ACTIVITIES ====================
 export const activities = pgTable("activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -227,7 +244,7 @@ export const checkoutCustomerSchema = z.object({
   phoneNumber: z.string().regex(/^0\d{9,10}$/, "Invalid Vietnamese phone number"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   province: z.string().min(1, "Province is required"),
-  district: z.string().min(1, "District is required"),
+  district: z.string().optional().or(z.literal("")),
   ward: z.string().min(1, "Ward is required"),
   streetAddress: z.string().min(1, "Street address is required"),
 });

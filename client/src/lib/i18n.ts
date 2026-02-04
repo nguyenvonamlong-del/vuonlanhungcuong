@@ -22,7 +22,7 @@ export const translations = {
   // Landing Page
   landing: {
     heroTitle: { 
-      vi: 'Vườn Lan Hưng Cường', 
+      vi: 'Vườn Lan Hùng Cường', 
       en: 'Orchid Garden' 
     },
     heroSubtitle: { 
@@ -30,8 +30,8 @@ export const translations = {
       en: 'Premium Phalaenopsis Orchids' 
     },
     heroCta: { 
-      vi: 'Khám phá ngay', 
-      en: 'Explore Now' 
+      vi: 'Chậu Hoa Có Sẵn', 
+      en: 'Premade Products' 
     },
     featuresTitle: { vi: 'Tại sao chọn chúng tôi', en: 'Why Choose Us' },
     feature1Title: { vi: 'Chất lượng cao', en: 'Premium Quality' },
