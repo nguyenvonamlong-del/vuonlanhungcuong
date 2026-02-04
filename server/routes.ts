@@ -432,7 +432,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/orders/:id/assign", async (req, res) => {
     try {
       const { technicianId } = req.body;
-      const order = await storage.updateOrder(req.params.id, { assignedTechnicianId: technicianId });
+      const order = await storage.updateOrder(req.params.id, { technicianId });
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
@@ -569,8 +569,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Get or create a chat session
   app.post("/api/chat/session", async (req, res) => {
     try {
-      const userType = (req.session as any)?.user?.role === "ADMIN" ? "ADMIN" : "CUSTOMER";
-      const userId = (req.session as any)?.user?.id;
+      const sessionUserId = (req.session as any)?.userId;
+      let userType = "CUSTOMER";
+      let userId = null;
+      
+      if (sessionUserId) {
+        const sessionUser = await storage.getUserById(sessionUserId);
+        if (sessionUser && sessionUser.role === "ADMIN") {
+          userType = "ADMIN";
+        }
+        userId = sessionUserId;
+      }
+      
       // Use express sessionID - it's always available and persists via cookie
       const sessionId = req.sessionID;
       
@@ -604,8 +614,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const currentSessionId = req.sessionID;
-      const currentUserId = (req.session as any)?.user?.id;
-      const isAdmin = (req.session as any)?.user?.role === "ADMIN";
+      const currentUserId = (req.session as any)?.userId;
+      
+      // Check if user is admin
+      let isAdmin = false;
+      if (currentUserId) {
+        const sessionUser = await storage.getUserById(currentUserId);
+        isAdmin = sessionUser?.role === "ADMIN";
+      }
       
       // Verify conversation ownership: must match session ID or user ID
       const ownsConversation = 
@@ -670,7 +686,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const currentSessionId = req.sessionID;
-      const currentUserId = (req.session as any)?.user?.id;
+      const currentUserId = (req.session as any)?.userId;
       
       // Verify ownership
       const ownsConversation = 
@@ -701,7 +717,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/pot-types", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createPotType(req.body);
@@ -713,7 +729,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/pot-types/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const updated = await storage.updatePotType(req.params.id, req.body);
@@ -726,7 +742,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/pot-types/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deletePotType(req.params.id);
@@ -748,7 +764,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/decoration-types", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createDecorationType(req.body);
@@ -760,7 +776,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/decoration-types/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const updated = await storage.updateDecorationType(req.params.id, req.body);
@@ -773,7 +789,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/decoration-types/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deleteDecorationType(req.params.id);
@@ -795,7 +811,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/payment-types", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createPaymentType(req.body);
@@ -807,7 +823,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/payment-types/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const updated = await storage.updatePaymentType(req.params.id, req.body);
@@ -820,7 +836,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/payment-types/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deletePaymentType(req.params.id);
@@ -833,7 +849,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ==================== SUPPLIERS ====================
   app.get("/api/suppliers", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const items = await storage.getSuppliers();
@@ -845,7 +861,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/suppliers/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const supplier = await storage.getSupplierById(req.params.id);
@@ -858,7 +874,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/suppliers", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createSupplier(req.body);
@@ -870,7 +886,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/suppliers/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const updated = await storage.updateSupplier(req.params.id, req.body);
@@ -883,7 +899,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/suppliers/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deleteSupplier(req.params.id);
@@ -896,7 +912,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ==================== PURCHASE ORDERS ====================
   app.get("/api/purchase-orders", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const items = await storage.getPurchaseOrders();
@@ -908,7 +924,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/purchase-orders/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const order = await storage.getPurchaseOrderById(req.params.id);
@@ -921,7 +937,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/purchase-orders", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const orderNumber = await storage.generatePurchaseOrderNumber();
@@ -938,7 +954,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/purchase-orders/:id", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const updated = await storage.updatePurchaseOrder(req.params.id, req.body);
@@ -952,7 +968,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ==================== NOTIFICATIONS ====================
   app.get("/api/notifications", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const { recipientType, recipientId } = req.query;
@@ -968,7 +984,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/notifications", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createNotification(req.body);
@@ -980,7 +996,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/notifications/:id/read", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const updated = await storage.markNotificationRead(req.params.id);
@@ -994,7 +1010,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ==================== ACTIVITIES (Audit Log) ====================
   app.get("/api/activities", async (req, res) => {
     try {
-      if (!(req.session as any)?.user) {
+      if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const limit = parseInt(req.query.limit as string) || 100;

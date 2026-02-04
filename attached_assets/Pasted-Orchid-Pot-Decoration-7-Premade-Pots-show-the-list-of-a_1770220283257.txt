@@ -1,0 +1,11 @@
+Orchid , Pot, Decoration
+7. Premade Pots show the list of all premade pots. Each pot should also show the same details about Orchid type, quantiy, Pot type, Decoration type plus an “Upload” button so that we can upload photos and videos about this premade pot so that the customer can view them.
+8. We should have an Inventory section for Inventory Management where we control all types of items: Orchid, Pot of what are in stock vs. run out of stock or low stock. We should be able to Add, Update, Delete item and item types with Add Item button.
+9. Under Customer, we must have “Add Customer” button as well as updating an existing customer or block them so that they can no longer order (for scammers). I want more meaningful statistics under Customer so that I can correlate the business with Customers.
+10. I want more meaningful statistics (how many in total, how many are busy vs. available, average time to complete an order) under Technicians so that I can correlate the business with Technicians.
+11. I want to have a Suppliers section so that I can manage them here (Add, Update, Delete, Enable, Disable). The suppliers are the one selling Orchids and Pots and others Decorations to us.
+12. I want to have Purchase Order section where I can manage and track all orders I have with my Suppliers. I want to see how many orders I have in total? The details of each order. What's the status of the shipment? details of the shipment, cost,etc...
+13. I want to have Reports section which will have 4 sub section about Sales, Operations, Orders, Customers, Technicians, Suppliers.
+14. I want to have Notifications section where we can track all notifications we have between the business and customers and suppliers. 
+15. There should be a Notification subsection under Settings where we define different kinds of Notification we can set up: email, SMS text, Zalo, voice mail.
+16. We should have an Audit Log section where we track all activities of all users in this web app and it's in read only mode so that no one can delete it.
