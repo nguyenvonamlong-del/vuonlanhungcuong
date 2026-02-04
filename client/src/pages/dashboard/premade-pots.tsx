@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { StatusBadge } from "@/components/status-badge";
 import { useApp } from "@/context/AppContext";
+import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -42,6 +43,7 @@ const initialFormData: Partial<InsertPremadePot> = {
 
 export default function PremadePotsPage() {
   const { language } = useApp();
+  const { openChatbot } = useChatbot();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -164,6 +166,14 @@ export default function PremadePotsPage() {
               <h1 className="font-semibold">{t("nav.premadePots", language)}</h1>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={openChatbot}
+                data-testid="button-header-chatbot"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
               <LanguageToggle />
               <ThemeToggle />
             </div>
@@ -326,7 +336,7 @@ export default function PremadePotsPage() {
               <div className="space-y-2">
                 <Label>{language === "vi" ? "Mô tả (Tiếng Việt)" : "Description (Vietnamese)"}</Label>
                 <Textarea
-                  value={formData.descriptionVi}
+                  value={formData.descriptionVi || ""}
                   onChange={(e) => setFormData({ ...formData, descriptionVi: e.target.value })}
                   rows={3}
                 />
@@ -334,7 +344,7 @@ export default function PremadePotsPage() {
               <div className="space-y-2">
                 <Label>{language === "vi" ? "Mô tả (Tiếng Anh)" : "Description (English)"}</Label>
                 <Textarea
-                  value={formData.descriptionEn}
+                  value={formData.descriptionEn || ""}
                   onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
                   rows={3}
                 />

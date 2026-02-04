@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Flower2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { StatusBadge } from "@/components/status-badge";
 import { useApp } from "@/context/AppContext";
+import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -36,6 +37,7 @@ const initialFormData: InsertCatalogItem = {
 
 export default function CatalogPage() {
   const { language } = useApp();
+  const { openChatbot } = useChatbot();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -151,6 +153,14 @@ export default function CatalogPage() {
               <h1 className="font-semibold">{t("catalog.title", language)}</h1>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={openChatbot}
+                data-testid="button-header-chatbot"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
               <LanguageToggle />
               <ThemeToggle />
             </div>

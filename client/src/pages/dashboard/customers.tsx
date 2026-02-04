@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Users, Phone, Mail, MapPin, ShoppingBag } from "lucide-react";
+import { Search, Users, Phone, Mail, MapPin, ShoppingBag, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,11 +13,13 @@ import { StaffSidebar } from "@/components/staff-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useApp } from "@/context/AppContext";
+import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import type { Customer } from "@shared/schema";
 
 export default function CustomersPage() {
   const { language } = useApp();
+  const { openChatbot } = useChatbot();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
@@ -60,6 +62,14 @@ export default function CustomersPage() {
               <h1 className="font-semibold">{t("nav.customers", language)}</h1>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={openChatbot}
+                data-testid="button-header-chatbot"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
               <LanguageToggle />
               <ThemeToggle />
             </div>

@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Flower2,
+  MessageCircle,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { StatusBadge } from "@/components/status-badge";
 import { useApp } from "@/context/AppContext";
+import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import type { DashboardStats, Order } from "@shared/schema";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Label } from "recharts";
 
 function StatCard({
   title,
@@ -58,6 +60,7 @@ const COLORS = ["#f59e0b", "#3b82f6", "#9333ea", "#06b6d4", "#f97316", "#22c55e"
 
 export default function DashboardPage() {
   const { language } = useApp();
+  const { openChatbot } = useChatbot();
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -79,6 +82,14 @@ export default function DashboardPage() {
               <h1 className="font-semibold">{t("dashboard.title", language)}</h1>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={openChatbot}
+                data-testid="button-header-chatbot"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
               <LanguageToggle />
               <ThemeToggle />
             </div>
@@ -196,6 +207,27 @@ export default function DashboardPage() {
                             outerRadius={100}
                             paddingAngle={2}
                             dataKey="count"
+                            label={({ cx, cy, midAngle, innerRadius, outerRadius, value }) => {
+                              if (value === 0) return null;
+                              const RADIAN = Math.PI / 180;
+                              const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                              return (
+                                <text
+                                  x={x}
+                                  y={y}
+                                  fill="white"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  fontSize={12}
+                                  fontWeight="bold"
+                                >
+                                  {value}
+                                </text>
+                              );
+                            }}
+                            labelLine={false}
                           >
                             {(stats?.ordersByStatus || []).map((_, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
