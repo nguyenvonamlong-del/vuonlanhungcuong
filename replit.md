@@ -4,6 +4,13 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Admin panel expansion:
+  - Added Suppliers management page with full CRUD operations, contact tracking, type categorization, and rating system
+  - Added Audit Log page (read-only) showing all system activities with auto-refresh every 30 seconds
+  - Restructured Catalog page into 5 tabs: Orchid, Pot, Decoration, Shipping, Payment types
+  - Extended sidebar navigation with new pages under Management and Admin sections
+  - Database schema expanded with tables: suppliers, purchase_orders, notifications, payment_types
+
 - **2026-02-04**: AI Chatbot feature:
   - Added floating chatbot button on all pages (bottom-right corner)
   - Customer chatbot: helps with product inquiries, ordering info, and order tracking
