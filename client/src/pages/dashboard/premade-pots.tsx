@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle, Package, Palette, X, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,8 +21,9 @@ import { useApp } from "@/context/AppContext";
 import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { useUpload } from "@/hooks/use-upload";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { PremadePot, InsertPremadePot } from "@shared/schema";
+import type { PremadePot, InsertPremadePot, PotType, DecorationType, CatalogItem } from "@shared/schema";
 
 const initialFormData: Partial<InsertPremadePot> = {
   nameVi: "",
@@ -55,6 +57,40 @@ export default function PremadePotsPage() {
   const { data: pots = [], isLoading } = useQuery<PremadePot[]>({
     queryKey: ["/api/premade-pots"],
   });
+
+  const { data: potTypes = [] } = useQuery<PotType[]>({
+    queryKey: ["/api/pot-types"],
+  });
+
+  const { data: decorationTypes = [] } = useQuery<DecorationType[]>({
+    queryKey: ["/api/decoration-types"],
+  });
+
+  const { data: catalogItems = [] } = useQuery<CatalogItem[]>({
+    queryKey: ["/api/catalog"],
+  });
+
+  const { uploadFile, isUploading } = useUpload();
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await uploadFile(file);
+    if (result?.objectPath) {
+      setFormData(prev => ({
+        ...prev,
+        images: [...(prev.images || []), result.objectPath]
+      }));
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }));
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -216,6 +252,8 @@ export default function PremadePotsPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
+                          <TableHead>{language === "vi" ? "Loại chậu" : "Pot Type"}</TableHead>
+                          <TableHead>{language === "vi" ? "Trang trí" : "Decoration"}</TableHead>
                           <TableHead>{t("shop.size", language)}</TableHead>
                           <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
                           <TableHead className="text-right">{t("catalog.stock", language)}</TableHead>
@@ -244,6 +282,26 @@ export default function PremadePotsPage() {
                                   {language === "vi" ? pot.nameVi : pot.nameEn}
                                 </span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {pot.potTypeName || pot.potTypeId ? (
+                                <div className="flex items-center gap-1">
+                                  <Package className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">{pot.potTypeName || "—"}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {pot.decorations && pot.decorations.length > 0 ? (
+                                <div className="flex items-center gap-1">
+                                  <Palette className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">{pot.decorations.length} items</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <StatusBadge status={pot.potSize} />
@@ -431,6 +489,153 @@ export default function PremadePotsPage() {
                 </Select>
               </div>
             </div>
+            {/* Images Upload Section */}
+            <div className="space-y-2">
+              <Label>{language === "vi" ? "Hình ảnh sản phẩm" : "Product Images"}</Label>
+              <div className="flex flex-wrap gap-2">
+                {(formData.images || []).map((img, index) => (
+                  <div key={index} className="relative w-20 h-20 rounded-md overflow-hidden border">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-5 w-5"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <label className="w-20 h-20 rounded-md border-2 border-dashed flex items-center justify-center cursor-pointer hover-elevate">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={isUploading}
+                    data-testid="input-image-upload"
+                  />
+                  {isUploading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* Pot Type Selection */}
+            <div className="space-y-2">
+              <Label>{language === "vi" ? "Loại chậu" : "Pot Type"}</Label>
+              <Select
+                value={formData.potTypeId || ""}
+                onValueChange={(v) => {
+                  const selected = potTypes.find(p => p.id === v);
+                  setFormData({ 
+                    ...formData, 
+                    potTypeId: v,
+                    potTypeName: selected ? (language === "vi" ? selected.nameVi : selected.nameEn) : undefined
+                  });
+                }}
+              >
+                <SelectTrigger data-testid="select-pot-type">
+                  <SelectValue placeholder={language === "vi" ? "Chọn loại chậu..." : "Select pot type..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {potTypes.filter(p => p.status === "ACTIVE").map(pot => (
+                    <SelectItem key={pot.id} value={pot.id}>
+                      <div className="flex items-center gap-2">
+                        {pot.imageUrl ? (
+                          <img src={pot.imageUrl} alt="" className="w-5 h-5 rounded object-cover" />
+                        ) : (
+                          <Package className="w-4 h-4" />
+                        )}
+                        <span>{language === "vi" ? pot.nameVi : pot.nameEn}</span>
+                        <span className="text-muted-foreground text-xs">({formatCurrency(pot.price, language)})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Decorations Selection */}
+            <div className="space-y-2">
+              <Label>{language === "vi" ? "Trang trí" : "Decorations"}</Label>
+              <div className="flex flex-wrap gap-2">
+                {(formData.decorations || []).map((dec, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    <Palette className="h-3 w-3" />
+                    {language === "vi" ? dec.nameVi : dec.nameEn}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 ml-1"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        decorations: (prev.decorations || []).filter((_, i) => i !== index)
+                      }))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+              <Select
+                value=""
+                onValueChange={(v) => {
+                  const selected = decorationTypes.find(d => d.id === v);
+                  if (selected) {
+                    setFormData(prev => ({
+                      ...prev,
+                      decorations: [
+                        ...(prev.decorations || []),
+                        {
+                          decorationTypeId: selected.id,
+                          nameVi: selected.nameVi,
+                          nameEn: selected.nameEn
+                        }
+                      ]
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger data-testid="select-decoration-type">
+                  <SelectValue placeholder={language === "vi" ? "Thêm trang trí..." : "Add decoration..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {decorationTypes.filter(d => d.status === "ACTIVE").map(dec => (
+                    <SelectItem key={dec.id} value={dec.id}>
+                      <div className="flex items-center gap-2">
+                        {dec.imageUrl ? (
+                          <img src={dec.imageUrl} alt="" className="w-5 h-5 rounded object-cover" />
+                        ) : (
+                          <Palette className="w-4 h-4" />
+                        )}
+                        <span>{language === "vi" ? dec.nameVi : dec.nameEn}</span>
+                        <span className="text-muted-foreground text-xs">({formatCurrency(dec.price, language)})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Orchid Composition Display */}
+            <div className="space-y-2">
+              <Label>{language === "vi" ? "Các loại lan trong chậu" : "Orchid Types in Pot"}</Label>
+              <div className="flex flex-wrap gap-1">
+                {(formData.orchidTypes || []).map((type, i) => (
+                  <Badge key={i} variant="secondary">{type}</Badge>
+                ))}
+                {(!formData.orchidTypes || formData.orchidTypes.length === 0) && (
+                  <span className="text-sm text-muted-foreground">{language === "vi" ? "Chưa có loại lan" : "No orchid types specified"}</span>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               <Switch
                 checked={formData.featured}

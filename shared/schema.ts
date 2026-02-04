@@ -100,6 +100,7 @@ export const customers = pgTable("customers", {
   totalOrders: integer("total_orders").notNull().default(0),
   totalSpent: decimal("total_spent", { precision: 15, scale: 0 }).notNull().default("0"),
   tags: text("tags").array(),
+  isBlocked: boolean("is_blocked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

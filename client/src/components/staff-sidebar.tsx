@@ -10,6 +10,10 @@ import {
   Package,
   Building2,
   History,
+  Warehouse,
+  ClipboardList,
+  Bell,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,9 +47,13 @@ export function StaffSidebar() {
     { href: "/dashboard/customers", label: t("nav.customers", language), icon: Users },
     { href: "/dashboard/technicians", label: t("nav.technicians", language), icon: Wrench },
     { href: "/dashboard/suppliers", label: language === "vi" ? "Nhà cung cấp" : "Suppliers", icon: Building2 },
+    { href: "/dashboard/inventory", label: language === "vi" ? "Tồn kho" : "Inventory", icon: Warehouse },
+    { href: "/dashboard/purchase-orders", label: language === "vi" ? "Đơn nhập hàng" : "Purchase Orders", icon: ClipboardList },
   ];
 
   const adminItems = user?.role === "ADMIN" ? [
+    { href: "/dashboard/reports", label: language === "vi" ? "Báo cáo" : "Reports", icon: BarChart3 },
+    { href: "/dashboard/notifications", label: language === "vi" ? "Thông báo" : "Notifications", icon: Bell },
     { href: "/dashboard/audit-log", label: language === "vi" ? "Nhật ký" : "Audit Log", icon: History },
     { href: "/dashboard/settings", label: language === "vi" ? "Cài đặt" : "Settings", icon: Settings },
   ] : [];

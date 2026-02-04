@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Search, Wrench, Star, Phone, MessageCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Wrench, Star, Phone, MessageCircle, Clock, CheckCircle, UserCheck, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -36,6 +37,7 @@ export default function TechniciansPage() {
   const { openChatbot } = useChatbot();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Technician | null>(null);
   const [formData, setFormData] = useState(initialFormData);
@@ -95,10 +97,48 @@ export default function TechniciansPage() {
     },
   });
 
-  const filteredItems = technicians.filter((tech) =>
-    tech.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tech.phoneNumber.includes(searchQuery)
-  );
+  const getAvailabilityBadge = (tech: Technician) => {
+    const workloadPercent = (tech.currentWorkload / tech.maxWorkload) * 100;
+    if (tech.status !== "ACTIVE") {
+      return <Badge variant="secondary">{language === "vi" ? "Không hoạt động" : "Inactive"}</Badge>;
+    }
+    if (workloadPercent >= 100) {
+      return <Badge variant="destructive" className="flex items-center gap-1">
+        <AlertTriangle className="h-3 w-3" />
+        {language === "vi" ? "Bận" : "Busy"}
+      </Badge>;
+    }
+    if (workloadPercent >= 80) {
+      return <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+        <Clock className="h-3 w-3" />
+        {language === "vi" ? "Gần đầy" : "Near Full"}
+      </Badge>;
+    }
+    return <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+      <CheckCircle className="h-3 w-3" />
+      {language === "vi" ? "Sẵn sàng" : "Available"}
+    </Badge>;
+  };
+
+  const filteredItems = technicians.filter((tech) => {
+    const matchesSearch = tech.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tech.phoneNumber.includes(searchQuery);
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "available" && tech.status === "ACTIVE" && tech.currentWorkload < tech.maxWorkload) ||
+      (statusFilter === "busy" && tech.currentWorkload >= tech.maxWorkload) ||
+      tech.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Statistics
+  const totalTechnicians = technicians.length;
+  const activeTechnicians = technicians.filter(t => t.status === "ACTIVE").length;
+  const busyTechnicians = technicians.filter(t => t.status === "ACTIVE" && t.currentWorkload >= t.maxWorkload).length;
+  const availableTechnicians = technicians.filter(t => t.status === "ACTIVE" && t.currentWorkload < t.maxWorkload).length;
+  const avgRating = technicians.length > 0
+    ? technicians.reduce((sum, t) => sum + parseFloat(t.performanceRating || "0"), 0) / technicians.length
+    : 0;
+  const totalWorkload = technicians.reduce((sum, t) => sum + t.currentWorkload, 0);
 
   const openCreate = () => {
     setEditingItem(null);
@@ -144,12 +184,7 @@ export default function TechniciansPage() {
               <h1 className="font-semibold">{t("nav.technicians", language)}</h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={openChatbot}
-                data-testid="button-header-chatbot"
-              >
+              <Button variant="ghost" size="icon" onClick={openChatbot} data-testid="button-header-chatbot">
                 <MessageCircle className="h-5 w-5" />
               </Button>
               <LanguageToggle />
@@ -158,16 +193,81 @@ export default function TechniciansPage() {
           </header>
 
           <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid gap-4 md:grid-cols-5">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium">{language === "vi" ? "Tổng số" : "Total"}</CardTitle>
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalTechnicians}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium">{language === "vi" ? "Sẵn sàng" : "Available"}</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{availableTechnicians}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium">{language === "vi" ? "Đang bận" : "Busy"}</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-destructive">{busyTechnicians}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium">{language === "vi" ? "Đơn đang xử lý" : "Active Orders"}</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalWorkload}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium">{language === "vi" ? "Đánh giá TB" : "Avg Rating"}</CardTitle>
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{avgRating.toFixed(1)}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("common.search", language) + "..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search"
-                />
+              <div className="flex gap-4 flex-1">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t("common.search", language) + "..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px]" data-testid="select-status-filter">
+                    <SelectValue placeholder={language === "vi" ? "Trạng thái" : "Status"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{language === "vi" ? "Tất cả" : "All"}</SelectItem>
+                    <SelectItem value="available">{language === "vi" ? "Sẵn sàng" : "Available"}</SelectItem>
+                    <SelectItem value="busy">{language === "vi" ? "Đang bận" : "Busy"}</SelectItem>
+                    <SelectItem value="ACTIVE">{t("catalog.active", language)}</SelectItem>
+                    <SelectItem value="INACTIVE">{t("catalog.inactive", language)}</SelectItem>
+                    <SelectItem value="ON_LEAVE">{language === "vi" ? "Nghỉ phép" : "On Leave"}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Button onClick={openCreate} data-testid="button-add-technician">
                 <Plus className="h-4 w-4 mr-2" />
@@ -195,6 +295,7 @@ export default function TechniciansPage() {
                         <TableRow>
                           <TableHead>{t("form.fullName", language)}</TableHead>
                           <TableHead>{t("form.phone", language)}</TableHead>
+                          <TableHead>{language === "vi" ? "Tình trạng" : "Availability"}</TableHead>
                           <TableHead>{language === "vi" ? "Khối lượng công việc" : "Workload"}</TableHead>
                           <TableHead className="text-center">{language === "vi" ? "Đánh giá" : "Rating"}</TableHead>
                           <TableHead>{t("catalog.status", language)}</TableHead>
@@ -214,12 +315,18 @@ export default function TechniciansPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="space-y-1">
+                                {getAvailabilityBadge(tech)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="space-y-1 min-w-[120px]">
                                   <div className="flex items-center justify-between text-xs">
                                     <span>{tech.currentWorkload}/{tech.maxWorkload}</span>
                                     <span className="text-muted-foreground">{Math.round(workloadPercent)}%</span>
                                   </div>
-                                  <Progress value={workloadPercent} className="h-2" />
+                                  <Progress 
+                                    value={workloadPercent} 
+                                    className={`h-2 ${workloadPercent >= 100 ? '[&>div]:bg-destructive' : workloadPercent >= 80 ? '[&>div]:bg-yellow-500' : ''}`}
+                                  />
                                 </div>
                               </TableCell>
                               <TableCell className="text-center">
@@ -307,21 +414,33 @@ export default function TechniciansPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("catalog.status", language)}</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(v) => setFormData({ ...formData, status: v })}
-                >
-                  <SelectTrigger data-testid="select-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">{t("catalog.active", language)}</SelectItem>
-                    <SelectItem value="INACTIVE">{t("catalog.inactive", language)}</SelectItem>
-                    <SelectItem value="ON_LEAVE">{language === "vi" ? "Nghỉ phép" : "On Leave"}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>{language === "vi" ? "Đánh giá" : "Rating"}</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="5"
+                  value={formData.performanceRating}
+                  onChange={(e) => setFormData({ ...formData, performanceRating: e.target.value })}
+                  data-testid="input-rating"
+                />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("catalog.status", language)}</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(v) => setFormData({ ...formData, status: v })}
+              >
+                <SelectTrigger data-testid="select-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">{t("catalog.active", language)}</SelectItem>
+                  <SelectItem value="INACTIVE">{t("catalog.inactive", language)}</SelectItem>
+                  <SelectItem value="ON_LEAVE">{language === "vi" ? "Nghỉ phép" : "On Leave"}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>

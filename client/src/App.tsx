@@ -20,6 +20,10 @@ import CustomersPage from "@/pages/dashboard/customers";
 import TechniciansPage from "@/pages/dashboard/technicians";
 import PremadePotsPage from "@/pages/dashboard/premade-pots";
 import SuppliersPage from "@/pages/dashboard/suppliers";
+import InventoryPage from "@/pages/dashboard/inventory";
+import PurchaseOrdersPage from "@/pages/dashboard/purchase-orders";
+import NotificationsPage from "@/pages/dashboard/notifications";
+import ReportsPage from "@/pages/dashboard/reports";
 import AuditLogPage from "@/pages/dashboard/audit-log";
 import SettingsPage from "@/pages/dashboard/settings";
 
@@ -46,6 +50,10 @@ function Router() {
       <Route path="/dashboard/technicians">{() => <ProtectedRoute component={TechniciansPage} />}</Route>
       <Route path="/dashboard/premade-pots">{() => <ProtectedRoute component={PremadePotsPage} />}</Route>
       <Route path="/dashboard/suppliers">{() => <ProtectedRoute component={SuppliersPage} />}</Route>
+      <Route path="/dashboard/inventory">{() => <ProtectedRoute component={InventoryPage} />}</Route>
+      <Route path="/dashboard/purchase-orders">{() => <ProtectedRoute component={PurchaseOrdersPage} />}</Route>
+      <Route path="/dashboard/notifications">{() => <ProtectedRoute component={NotificationsPage} />}</Route>
+      <Route path="/dashboard/reports">{() => <ProtectedRoute component={ReportsPage} />}</Route>
       <Route path="/dashboard/audit-log">{() => <ProtectedRoute component={AuditLogPage} />}</Route>
       <Route path="/dashboard/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
       <Route component={NotFound} />

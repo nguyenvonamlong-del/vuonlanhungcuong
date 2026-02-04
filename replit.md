@@ -4,6 +4,15 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Enhanced admin panel with comprehensive management features:
+  - **Inventory Management**: Stock level tracking with low/critical alerts, adjustment dialog with increment/decrement controls, summary cards for orchids and premade pots
+  - **Purchase Orders**: Full CRUD with supplier selection, dynamic item management, status workflow (Pending→Confirmed→Shipped→Received), payment tracking
+  - **Customers Page Enhanced**: Add/Update/Block functionality, customer type filtering (VIP/Registered/Guest), statistics cards (total customers, VIP, registered, avg spent)
+  - **Technicians Page Enhanced**: Availability badges (Available/Near Full/Busy based on workload), statistics cards, status filtering
+  - **Notifications Page**: Full notification management with status/type filtering, mark as read, delete functionality, statistics cards
+  - **Reports Section**: Comprehensive reports with 5 tabs (Sales, Orders, Customers, Technicians, Suppliers) with relevant metrics, charts, and data tables
+  - Database: Added isBlocked field to customers table
+
 - **2026-02-04**: Admin panel expansion:
   - Added Suppliers management page with full CRUD operations, contact tracking, type categorization, and rating system
   - Added Audit Log page (read-only) showing all system activities with auto-refresh every 30 seconds

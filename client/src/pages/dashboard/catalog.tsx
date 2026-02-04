@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard } from "lucide-react";
+import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -402,6 +403,7 @@ export default function CatalogPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">{language === "vi" ? "Ảnh" : "Image"}</TableHead>
                   <TableHead>{t("catalog.species", language)}</TableHead>
                   <TableHead>{t("catalog.color", language)}</TableHead>
                   <TableHead className="text-right">{t("catalog.height", language)}</TableHead>
@@ -414,6 +416,15 @@ export default function CatalogPage() {
               <TableBody>
                 {filteredOrchids.map((item) => (
                   <TableRow key={item.id} data-testid={`row-catalog-${item.id}`}>
+                    <TableCell>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt="" className="w-10 h-10 rounded object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                          <Flower2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {language === "vi" ? item.speciesNameVi : item.speciesNameEn}
                     </TableCell>
@@ -476,6 +487,9 @@ export default function CatalogPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {(type === "pot" || type === "decoration") && (
+                      <TableHead className="w-16">{language === "vi" ? "Ảnh" : "Image"}</TableHead>
+                    )}
                     <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
                     <TableHead>{language === "vi" ? "Mô tả" : "Description"}</TableHead>
                     {(type === "pot" || type === "decoration") && (
@@ -497,6 +511,17 @@ export default function CatalogPage() {
                 <TableBody>
                   {items.map((item) => (
                     <TableRow key={item.id} data-testid={`row-${type}-${item.id}`}>
+                      {(type === "pot" || type === "decoration") && (
+                        <TableCell>
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt="" className="w-10 h-10 rounded object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                              {type === "pot" ? <Package className="h-5 w-5 text-muted-foreground" /> : <Palette className="h-5 w-5 text-muted-foreground" />}
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         {language === "vi" ? item.nameVi : item.nameEn}
                       </TableCell>
@@ -687,6 +712,11 @@ export default function CatalogPage() {
                 />
               </div>
             </div>
+            <ImageUpload
+              value={orchidForm.imageUrl || ""}
+              onChange={(url) => setOrchidForm({ ...orchidForm, imageUrl: url })}
+              label={language === "vi" ? "Hình ảnh" : "Image"}
+            />
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{t("catalog.price", language)}</Label>
@@ -765,16 +795,23 @@ export default function CatalogPage() {
             </div>
 
             {(genericDialogType === "pot" || genericDialogType === "decoration") && (
-              <div className="space-y-2">
-                <Label>{t("catalog.price", language)}</Label>
-                <Input
-                  type="number"
-                  value={genericForm.price}
-                  onChange={(e) => setGenericForm({ ...genericForm, price: e.target.value })}
-                  required
-                  data-testid="input-price"
+              <>
+                <ImageUpload
+                  value={genericForm.imageUrl || ""}
+                  onChange={(url) => setGenericForm({ ...genericForm, imageUrl: url })}
+                  label={language === "vi" ? "Hình ảnh" : "Image"}
                 />
-              </div>
+                <div className="space-y-2">
+                  <Label>{t("catalog.price", language)}</Label>
+                  <Input
+                    type="number"
+                    value={genericForm.price}
+                    onChange={(e) => setGenericForm({ ...genericForm, price: e.target.value })}
+                    required
+                    data-testid="input-price"
+                  />
+                </div>
+              </>
             )}
 
             {genericDialogType === "shipping" && (
