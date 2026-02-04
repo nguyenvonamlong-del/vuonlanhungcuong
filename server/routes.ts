@@ -555,15 +555,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { value } = req.body;
       
       // Validate known settings keys and their value formats
-      const allowedKeys = ["tax_enabled", "tax_percentage"];
+      const allowedKeys = [
+        "tax_enabled", 
+        "tax_percentage",
+        "show_premade_dimensions",
+        "show_premade_weight",
+        "plivo_auth_id",
+        "plivo_auth_token",
+        "zeptomail_token",
+        "zalo_app_id",
+        "zalo_secret_key"
+      ];
       if (!allowedKeys.includes(key)) {
         return res.status(400).json({ error: "Invalid setting key" });
       }
       
       // Validate value format based on key
-      if (key === "tax_enabled") {
+      if (key === "tax_enabled" || key === "show_premade_dimensions" || key === "show_premade_weight") {
         if (value !== "true" && value !== "false") {
-          return res.status(400).json({ error: "tax_enabled must be 'true' or 'false'" });
+          return res.status(400).json({ error: `${key} must be 'true' or 'false'` });
         }
       } else if (key === "tax_percentage") {
         const numValue = parseFloat(value);
@@ -573,9 +583,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const updated = await storage.updateSetting(key, value);
-      if (!updated) {
-        return res.status(404).json({ error: "Setting not found" });
-      }
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update setting" });

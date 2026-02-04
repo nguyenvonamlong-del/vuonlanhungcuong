@@ -4,6 +4,19 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Notification Services Integration (admin-only):
+  - **Notification Channels CRUD**: Full management for notification channels (Email, SMS, Voicemail, Zalo)
+    - Add/Edit/Delete channels with bilingual names and descriptions
+    - Status toggle (Active/Inactive) per channel
+    - Type-specific icons (Mail, Phone, MessageSquare)
+  - **API Credentials Management**: Settings page now includes API credentials section for:
+    - **Plivo** (SMS + Voicemail): Auth ID and Auth Token fields
+    - **Zoho ZeptoMail** (Email): Send Mail Token field (10,000 free emails/month)
+    - **Zalo Official Account**: App ID and Secret Key fields
+  - Password masking with visibility toggle for sensitive credentials
+  - "Configured" badge indicator when credentials are saved
+  - Settings stored securely in database with upsert logic
+
 - **2026-02-04**: Users Management system (admin-only):
   - Full CRUD operations for staff accounts with username, password, full name, email, role
   - Enable/Disable toggle for user accounts (status: ACTIVE/INACTIVE)

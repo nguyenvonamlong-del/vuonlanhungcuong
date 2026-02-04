@@ -494,11 +494,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateSetting(key: string, value: string): Promise<Settings | undefined> {
+    // First try to update
     const [updated] = await db
       .update(settings)
       .set({ value, updatedAt: new Date() })
       .where(eq(settings.key, key))
       .returning();
+    
+    // If no rows were updated, insert a new setting
+    if (!updated) {
+      const [created] = await db
+        .insert(settings)
+        .values({ id: uuidv4(), key, value })
+        .returning();
+      return created;
+    }
+    
     return updated;
   }
   

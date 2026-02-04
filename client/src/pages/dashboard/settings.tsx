@@ -9,7 +9,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
-import { Loader2, Settings as SettingsIcon, Save, Percent, Flower2, MessageCircle, Bell, Mail, Phone, MessageSquare, Plus, Edit, Trash2 } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Save, Percent, Flower2, MessageCircle, Bell, Mail, Phone, MessageSquare, Plus, Edit, Trash2, Key, Eye, EyeOff } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -50,10 +50,27 @@ export default function SettingsPage() {
     status: "ACTIVE" as string,
   });
 
+  // API Credentials state
+  const [plivoAuthId, setPlivoAuthId] = useState<string | null>(null);
+  const [plivoAuthToken, setPlivoAuthToken] = useState<string | null>(null);
+  const [zeptoMailToken, setZeptoMailToken] = useState<string | null>(null);
+  const [zaloAppId, setZaloAppId] = useState<string | null>(null);
+  const [zaloSecretKey, setZaloSecretKey] = useState<string | null>(null);
+  const [showPlivoToken, setShowPlivoToken] = useState(false);
+  const [showZeptoToken, setShowZeptoToken] = useState(false);
+  const [showZaloSecret, setShowZaloSecret] = useState(false);
+
   const effectiveTaxEnabled = taxEnabled !== null ? taxEnabled : settings.tax_enabled === "true";
   const effectiveTaxPercentage = taxPercentage !== null ? taxPercentage : (settings.tax_percentage || "10");
   const effectiveShowDimensions = showDimensions !== null ? showDimensions : settings.show_premade_dimensions !== "false";
   const effectiveShowWeight = showWeight !== null ? showWeight : settings.show_premade_weight !== "false";
+
+  // Effective API credentials values
+  const effectivePlivoAuthId = plivoAuthId !== null ? plivoAuthId : (settings.plivo_auth_id || "");
+  const effectivePlivoAuthToken = plivoAuthToken !== null ? plivoAuthToken : (settings.plivo_auth_token || "");
+  const effectiveZeptoMailToken = zeptoMailToken !== null ? zeptoMailToken : (settings.zeptomail_token || "");
+  const effectiveZaloAppId = zaloAppId !== null ? zaloAppId : (settings.zalo_app_id || "");
+  const effectiveZaloSecretKey = zaloSecretKey !== null ? zaloSecretKey : (settings.zalo_secret_key || "");
 
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
@@ -213,6 +230,36 @@ export default function SettingsPage() {
   };
 
   const hasChanges = taxEnabled !== null || taxPercentage !== null || showDimensions !== null || showWeight !== null;
+
+  const hasCredentialsChanges = plivoAuthId !== null || plivoAuthToken !== null || zeptoMailToken !== null || zaloAppId !== null || zaloSecretKey !== null;
+
+  const handleSaveCredentials = async () => {
+    if (plivoAuthId !== null) {
+      await updateSettingMutation.mutateAsync({ key: "plivo_auth_id", value: effectivePlivoAuthId });
+    }
+    if (plivoAuthToken !== null) {
+      await updateSettingMutation.mutateAsync({ key: "plivo_auth_token", value: effectivePlivoAuthToken });
+    }
+    if (zeptoMailToken !== null) {
+      await updateSettingMutation.mutateAsync({ key: "zeptomail_token", value: effectiveZeptoMailToken });
+    }
+    if (zaloAppId !== null) {
+      await updateSettingMutation.mutateAsync({ key: "zalo_app_id", value: effectiveZaloAppId });
+    }
+    if (zaloSecretKey !== null) {
+      await updateSettingMutation.mutateAsync({ key: "zalo_secret_key", value: effectiveZaloSecretKey });
+    }
+    setPlivoAuthId(null);
+    setPlivoAuthToken(null);
+    setZeptoMailToken(null);
+    setZaloAppId(null);
+    setZaloSecretKey(null);
+  };
+
+  const maskValue = (value: string) => {
+    if (!value || value.length <= 4) return value ? "****" : "";
+    return "****" + value.slice(-4);
+  };
 
   const style = {
     "--sidebar-width": "16rem",
@@ -529,6 +576,172 @@ export default function SettingsPage() {
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                {language === "vi" ? "Thông tin API" : "API Credentials"}
+              </CardTitle>
+              <CardDescription>
+                {language === "vi"
+                  ? "Cấu hình thông tin xác thực cho các dịch vụ thông báo bên ngoài"
+                  : "Configure credentials for external notification services"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Plivo (SMS + Voicemail)
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === "vi" 
+                    ? "Đăng ký tại plivo.com để lấy Auth ID và Auth Token" 
+                    : "Sign up at plivo.com to get your Auth ID and Auth Token"}
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Auth ID</Label>
+                    <Input
+                      placeholder={settings.plivo_auth_id ? maskValue(settings.plivo_auth_id) : "Enter Auth ID"}
+                      value={plivoAuthId ?? ""}
+                      onChange={(e) => setPlivoAuthId(e.target.value)}
+                      data-testid="input-plivo-auth-id"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Auth Token</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPlivoToken ? "text" : "password"}
+                        placeholder={settings.plivo_auth_token ? maskValue(settings.plivo_auth_token) : "Enter Auth Token"}
+                        value={plivoAuthToken ?? ""}
+                        onChange={(e) => setPlivoAuthToken(e.target.value)}
+                        data-testid="input-plivo-auth-token"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowPlivoToken(!showPlivoToken)}
+                      >
+                        {showPlivoToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                {settings.plivo_auth_id && (
+                  <Badge variant="outline" className="text-green-600">
+                    {language === "vi" ? "Đã cấu hình" : "Configured"}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="border-t pt-6 space-y-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Zoho ZeptoMail (Email)
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === "vi" 
+                    ? "Đăng ký tại zoho.com/zeptomail để lấy Send Mail Token (10,000 email miễn phí/tháng)" 
+                    : "Sign up at zoho.com/zeptomail to get your Send Mail Token (10,000 free emails/month)"}
+                </p>
+                <div className="space-y-2">
+                  <Label>Send Mail Token</Label>
+                  <div className="relative">
+                    <Input
+                      type={showZeptoToken ? "text" : "password"}
+                      placeholder={settings.zeptomail_token ? maskValue(settings.zeptomail_token) : "Enter Send Mail Token"}
+                      value={zeptoMailToken ?? ""}
+                      onChange={(e) => setZeptoMailToken(e.target.value)}
+                      data-testid="input-zeptomail-token"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowZeptoToken(!showZeptoToken)}
+                    >
+                      {showZeptoToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                {settings.zeptomail_token && (
+                  <Badge variant="outline" className="text-green-600">
+                    {language === "vi" ? "Đã cấu hình" : "Configured"}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="border-t pt-6 space-y-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Zalo Official Account
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === "vi" 
+                    ? "Đăng ký tại oa.zalo.me để lấy App ID và Secret Key" 
+                    : "Register at oa.zalo.me to get your App ID and Secret Key"}
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>App ID</Label>
+                    <Input
+                      placeholder={settings.zalo_app_id ? maskValue(settings.zalo_app_id) : "Enter App ID"}
+                      value={zaloAppId ?? ""}
+                      onChange={(e) => setZaloAppId(e.target.value)}
+                      data-testid="input-zalo-app-id"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secret Key</Label>
+                    <div className="relative">
+                      <Input
+                        type={showZaloSecret ? "text" : "password"}
+                        placeholder={settings.zalo_secret_key ? maskValue(settings.zalo_secret_key) : "Enter Secret Key"}
+                        value={zaloSecretKey ?? ""}
+                        onChange={(e) => setZaloSecretKey(e.target.value)}
+                        data-testid="input-zalo-secret-key"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowZaloSecret(!showZaloSecret)}
+                      >
+                        {showZaloSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                {settings.zalo_app_id && (
+                  <Badge variant="outline" className="text-green-600">
+                    {language === "vi" ? "Đã cấu hình" : "Configured"}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="pt-4 border-t">
+                <Button
+                  onClick={handleSaveCredentials}
+                  disabled={!hasCredentialsChanges || updateSettingMutation.isPending}
+                  data-testid="button-save-credentials"
+                >
+                  {updateSettingMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {language === "vi" ? "Lưu thông tin API" : "Save API Credentials"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
