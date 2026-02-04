@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
-import { insertCatalogItemSchema, insertPremadePotSchema, insertTechnicianSchema, insertOrderSchema, insertCustomerSchema, insertShippingTypeSchema } from "@shared/schema";
+import { insertCatalogItemSchema, insertPremadePotSchema, insertTechnicianSchema, insertOrderSchema, insertCustomerSchema, insertShippingTypeSchema, insertUserSchema } from "@shared/schema";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
@@ -1188,15 +1188,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!currentUser || currentUser.role !== "ADMIN") {
         return res.status(403).json({ error: "Admin access required" });
       }
+      // Validate request body using Zod schema (schema enforces role and status enums)
+      const userData = insertUserSchema.parse(req.body);
       // Check if username already exists
-      const existing = await storage.getUserByUsername(req.body.username);
+      const existing = await storage.getUserByUsername(userData.username);
       if (existing) {
         return res.status(400).json({ error: "Username already exists" });
       }
-      const item = await storage.createUser(req.body);
-      const { password, ...safeUser } = item;
+      const item = await storage.createUser(userData);
+      const { password: pwd, ...safeUser } = item;
       res.json(safeUser);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: error.errors[0]?.message || "Invalid data" });
+      }
       res.status(500).json({ error: "Failed to create user" });
     }
   });
@@ -1214,13 +1219,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (req.params.id === (req.session as any).userId && req.body.status) {
         return res.status(400).json({ error: "Cannot change your own status" });
       }
-      const item = await storage.updateUser(req.params.id, req.body);
+      // Validate using partial schema - schema enforces role and status enums
+      const updateUserSchema = insertUserSchema.partial().omit({ username: true });
+      const validated = updateUserSchema.parse(req.body);
+      
+      // Pass validated data directly to storage
+      const item = await storage.updateUser(req.params.id, validated);
       if (!item) {
         return res.status(404).json({ error: "User not found" });
       }
-      const { password, ...safeUser } = item;
+      const { password: pwd, ...safeUser } = item;
       res.json(safeUser);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: error.errors[0]?.message || "Invalid data" });
+      }
       res.status(500).json({ error: "Failed to update user" });
     }
   });

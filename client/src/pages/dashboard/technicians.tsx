@@ -30,7 +30,10 @@ const initialFormData = {
   status: "ACTIVE",
   maxWorkload: 5,
   performanceRating: "4.0",
+  userId: "",
 };
+
+type SafeUser = { id: string; username: string; fullName: string; role: string; status: string };
 
 export default function TechniciansPage() {
   const { language } = useApp();
@@ -46,6 +49,11 @@ export default function TechniciansPage() {
 
   const { data: technicians = [], isLoading } = useQuery<Technician[]>({
     queryKey: ["/api/technicians"],
+  });
+
+  const { data: users = [], isError: usersError } = useQuery<SafeUser[]>({
+    queryKey: ["/api/users"],
+    retry: false,
   });
 
   const createMutation = useMutation({
@@ -155,16 +163,21 @@ export default function TechniciansPage() {
       status: tech.status,
       maxWorkload: tech.maxWorkload,
       performanceRating: String(tech.performanceRating || "4.0"),
+      userId: tech.userId || "",
     });
     setDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const submitData = {
+      ...formData,
+      userId: formData.userId === "none" || formData.userId === "" ? null : formData.userId,
+    };
     if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data: formData });
+      updateMutation.mutate({ id: editingItem.id, data: submitData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -442,6 +455,27 @@ export default function TechniciansPage() {
                 </SelectContent>
               </Select>
             </div>
+            {!usersError && users.length > 0 && (
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Tài khoản người dùng" : "User Account"}</Label>
+                <Select
+                  value={formData.userId}
+                  onValueChange={(v) => setFormData({ ...formData, userId: v })}
+                >
+                  <SelectTrigger data-testid="select-userId">
+                    <SelectValue placeholder={language === "vi" ? "Chọn tài khoản..." : "Select account..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{language === "vi" ? "Không liên kết" : "No link"}</SelectItem>
+                    {users.filter(u => u.status === "ACTIVE").map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.fullName} ({user.username})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 {t("common.cancel", language)}
