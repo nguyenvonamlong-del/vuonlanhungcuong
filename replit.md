@@ -4,6 +4,16 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-04**: Users Management system (admin-only):
+  - Full CRUD operations for staff accounts with username, password, full name, email, role
+  - Enable/Disable toggle for user accounts (status: ACTIVE/INACTIVE)
+  - Role management: ADMIN, MANAGER, EMPLOYEE with dropdown selection
+  - Statistics dashboard: total users, active users, admins, managers
+  - Search by username/name and filter by role/status
+  - Schema-driven validation with z.enum for role and status
+  - Technician-User association: technicians can be linked to user accounts via userId field
+  - Admin-only access restriction (non-admins get 403 error)
+
 - **2026-02-04**: Enhanced admin panel with comprehensive management features:
   - **Inventory Management**: Stock level tracking with low/critical alerts, adjustment dialog with increment/decrement controls, summary cards for orchids and premade pots
   - **Purchase Orders**: Full CRUD with supplier selection, dynamic item management, status workflow (Pending→Confirmed→Shipped→Received), payment tracking
