@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/public-header";
 import { useApp } from "@/context/AppContext";
 import { t, formatCurrency } from "@/lib/i18n";
@@ -450,22 +451,41 @@ export default function CheckoutPage() {
                     <Separator />
 
                     <div className="space-y-2">
-                      <Label className="text-sm">
-                        {language === "vi" ? "Chọn lan cho chậu" : "Select orchids for pot"}
-                      </Label>
-                      <Select onValueChange={(id) => {
-                        const item = activeItems.find((i) => i.id === id);
-                        if (item) addOrchidToPot(pot.id, item);
-                      }}>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm">
+                          {language === "vi" ? "Thêm loại lan cho chậu" : "Add orchid types to pot"}
+                        </Label>
+                        {pot.orchids.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {pot.orchids.length} {language === "vi" ? "loại" : pot.orchids.length === 1 ? "type" : "types"}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {language === "vi" 
+                          ? "Bạn có thể chọn nhiều loại lan khác nhau cho mỗi chậu" 
+                          : "You can select multiple orchid types for each pot"}
+                      </p>
+                      <Select 
+                        key={`orchid-select-${pot.id}-${pot.orchids.length}`}
+                        onValueChange={(id) => {
+                          const item = activeItems.find((i) => i.id === id);
+                          if (item) addOrchidToPot(pot.id, item);
+                        }}
+                      >
                         <SelectTrigger data-testid={`select-add-orchid-${potIndex}`}>
-                          <SelectValue placeholder={t("checkout.selectOrchid", language)} />
+                          <SelectValue placeholder={language === "vi" ? "Nhấn để thêm loại lan..." : "Click to add orchid type..."} />
                         </SelectTrigger>
                         <SelectContent>
-                          {activeItems.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color} ({formatCurrency(item.pricePerUnit, language)})
-                            </SelectItem>
-                          ))}
+                          {activeItems.map((item) => {
+                            const alreadyAdded = pot.orchids.some(o => o.catalogId === item.id);
+                            return (
+                              <SelectItem key={item.id} value={item.id}>
+                                {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color} ({formatCurrency(item.pricePerUnit, language)})
+                                {alreadyAdded && ` ✓`}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>

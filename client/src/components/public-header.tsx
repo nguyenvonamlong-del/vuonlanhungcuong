@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Flower2, ShoppingCart, Menu, X } from "lucide-react";
+import { Flower2, ShoppingCart, Menu, X, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -8,11 +8,13 @@ import { t, formatCurrency } from "@/lib/i18n";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { useChatbot } from "@/context/ChatbotContext";
 
 export function PublicHeader() {
   const { language, cart, cartCount, cartTotal, removeFromCart, updateCartQuantity, clearCart } = useApp();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { openChatbot } = useChatbot();
 
   const navLinks = [
     { href: "/", label: t("nav.home", language) },
@@ -158,6 +160,15 @@ export function PublicHeader() {
             </SheetContent>
           </Sheet>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openChatbot}
+            data-testid="button-header-chatbot"
+            title={language === "vi" ? "Trợ lý chat" : "Chat assistant"}
+          >
+            <MessageCircle className="h-5 w-5" />
+          </Button>
           <LanguageToggle />
           <ThemeToggle />
 

@@ -13,7 +13,16 @@ import { PublicHeader } from "@/components/public-header";
 import { StatusBadge } from "@/components/status-badge";
 import { useApp } from "@/context/AppContext";
 import { t, formatCurrency } from "@/lib/i18n";
-import type { PremadePot } from "@shared/schema";
+import type { PremadePot, PremadeOrchidItem, PremadeDecorationItem } from "@shared/schema";
+
+type ExtendedPremadePot = PremadePot & {
+  orchidComposition?: PremadeOrchidItem[];
+  potTypeName?: string;
+  decorations?: PremadeDecorationItem[];
+  lengthCm?: number;
+  widthCm?: number;
+  weightKg?: string;
+};
 
 export default function ShopPage() {
   const { language, addToCart } = useApp();
@@ -21,12 +30,19 @@ export default function ShopPage() {
   const [sortBy, setSortBy] = useState("featured");
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
-  const [selectedPot, setSelectedPot] = useState<PremadePot | null>(null);
+  const [selectedPot, setSelectedPot] = useState<ExtendedPremadePot | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const { data: pots, isLoading } = useQuery<PremadePot[]>({
+  const { data: pots, isLoading } = useQuery<ExtendedPremadePot[]>({
     queryKey: ["/api/shop/pots"],
   });
+
+  const { data: settings = {} } = useQuery<Record<string, string>>({
+    queryKey: ["/api/settings"],
+  });
+
+  const showDimensions = settings.show_premade_dimensions !== "false";
+  const showWeight = settings.show_premade_weight !== "false";
 
   const filteredPots = (pots || [])
     .filter((pot) => {
@@ -281,7 +297,41 @@ export default function ShopPage() {
                   <p className="text-muted-foreground">
                     {language === "vi" ? selectedPot.descriptionVi : selectedPot.descriptionEn}
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    {/* Orchid Composition */}
+                    {selectedPot.orchidComposition && selectedPot.orchidComposition.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium">{language === "vi" ? "Thành phần lan:" : "Orchid Composition:"}</span>
+                        <ul className="mt-1 text-sm text-muted-foreground space-y-0.5">
+                          {selectedPot.orchidComposition.map((orchid, idx) => (
+                            <li key={idx}>
+                              • {language === "vi" ? orchid.speciesNameVi : orchid.speciesNameEn} ({orchid.color}) x{orchid.quantity}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Pot Type */}
+                    {selectedPot.potTypeName && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{language === "vi" ? "Loại chậu:" : "Pot Type:"}</span>
+                        <span className="text-sm">{selectedPot.potTypeName}</span>
+                      </div>
+                    )}
+
+                    {/* Decorations */}
+                    {selectedPot.decorations && selectedPot.decorations.length > 0 && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">{language === "vi" ? "Trang trí:" : "Decorations:"}</span>
+                        <span className="text-sm ml-1">
+                          {selectedPot.decorations
+                            .map(d => language === "vi" ? d.nameVi : d.nameEn)
+                            .join(", ")}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">{t("shop.size", language)}:</span>
                       <StatusBadge status={selectedPot.potSize} />
@@ -290,12 +340,25 @@ export default function ShopPage() {
                       <span className="text-sm text-muted-foreground">{t("shop.difficulty", language)}:</span>
                       <StatusBadge status={selectedPot.difficultyLevel} />
                     </div>
-                    {selectedPot.heightCm && (
+
+                    {/* Dimensions - only show if setting enabled */}
+                    {showDimensions && (selectedPot.lengthCm || selectedPot.widthCm || selectedPot.heightCm) && (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">{language === "vi" ? "Chiều cao" : "Height"}:</span>
-                        <span className="text-sm">{selectedPot.heightCm} cm</span>
+                        <span className="text-sm text-muted-foreground">{language === "vi" ? "Kích thước (D×R×C):" : "Dimensions (L×W×H):"}</span>
+                        <span className="text-sm">
+                          {selectedPot.lengthCm || "-"}×{selectedPot.widthCm || "-"}×{selectedPot.heightCm || "-"} cm
+                        </span>
                       </div>
                     )}
+
+                    {/* Weight - only show if setting enabled */}
+                    {showWeight && selectedPot.weightKg && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{language === "vi" ? "Cân nặng:" : "Weight:"}</span>
+                        <span className="text-sm">{selectedPot.weightKg} kg</span>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">{language === "vi" ? "Còn lại" : "Stock"}:</span>
                       <span className="text-sm">{selectedPot.stockQuantity} {language === "vi" ? "chậu" : "pots"}</span>

@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useApp } from "@/context/AppContext";
+import { useChatbot } from "@/context/ChatbotContext";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -25,7 +26,7 @@ interface ChatSession {
 
 export function Chatbot() {
   const { language, user } = useApp();
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, openChatbot, closeChatbot } = useChatbot();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -40,7 +41,7 @@ export function Chatbot() {
     if (isOpen && !conversationId) {
       initSession();
     }
-  }, [isOpen]);
+  }, [isOpen, conversationId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -172,7 +173,7 @@ export function Chatbot() {
         <Button
           size="lg"
           className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg"
-          onClick={() => setIsOpen(true)}
+          onClick={openChatbot}
           data-testid="button-chatbot-open"
         >
           <MessageCircle className="h-6 w-6" />
@@ -194,7 +195,7 @@ export function Chatbot() {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setIsOpen(false)}
+              onClick={closeChatbot}
               data-testid="button-chatbot-close"
             >
               <X className="h-4 w-4" />

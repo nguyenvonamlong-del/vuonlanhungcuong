@@ -197,6 +197,22 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 
 // ==================== PRE-MADE POTS ====================
+// Orchid composition for premade pots
+export interface PremadeOrchidItem {
+  catalogItemId?: string;
+  speciesNameVi: string;
+  speciesNameEn: string;
+  color: string;
+  quantity: number;
+}
+
+// Decoration item for premade pots
+export interface PremadeDecorationItem {
+  decorationTypeId?: string;
+  nameVi: string;
+  nameEn: string;
+}
+
 export const premadePots = pgTable("premade_pots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nameVi: text("name_vi").notNull(),
@@ -206,9 +222,20 @@ export const premadePots = pgTable("premade_pots", {
   price: decimal("price", { precision: 12, scale: 0 }).notNull(),
   stockQuantity: integer("stock_quantity").notNull().default(0),
   images: text("images").array(),
-  orchidTypes: text("orchid_types").array(),
-  potSize: text("pot_size").notNull().default("MEDIUM"), // SMALL, MEDIUM, LARGE, XLARGE
+  // Enhanced orchid composition (JSON with type, quantity per type)
+  orchidComposition: jsonb("orchid_composition").$type<PremadeOrchidItem[]>(),
+  orchidTypes: text("orchid_types").array(), // Legacy - kept for backward compatibility
+  // Pot type reference
+  potTypeId: varchar("pot_type_id").references(() => potTypes.id),
+  potTypeName: text("pot_type_name"),
+  // Decoration items
+  decorations: jsonb("decorations").$type<PremadeDecorationItem[]>(),
+  // Dimensions (optional)
+  lengthCm: integer("length_cm"),
+  widthCm: integer("width_cm"),
   heightCm: integer("height_cm"),
+  weightKg: decimal("weight_kg", { precision: 5, scale: 2 }),
+  potSize: text("pot_size").notNull().default("MEDIUM"), // SMALL, MEDIUM, LARGE, XLARGE
   difficultyLevel: text("difficulty_level").notNull().default("MEDIUM"), // EASY, MEDIUM, HARD
   careInstructionsVi: text("care_instructions_vi"),
   careInstructionsEn: text("care_instructions_en"),
