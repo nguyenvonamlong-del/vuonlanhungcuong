@@ -394,6 +394,8 @@ export const notificationChannels = pgTable("notification_channels", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nameVi: text("name_vi").notNull(),
   nameEn: text("name_en").notNull(),
+  descriptionVi: text("description_vi"),
+  descriptionEn: text("description_en"),
   type: text("type").notNull(), // EMAIL, SMS, VOICEMAIL, ZALO
   configJson: jsonb("config_json").$type<Record<string, string>>(),
   isEnabled: boolean("is_enabled").notNull().default(true),

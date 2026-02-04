@@ -9,9 +9,12 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { StaffSidebar } from "@/components/staff-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
-import { Loader2, Settings as SettingsIcon, Save, Percent, Flower2, MessageCircle, Bell, Mail, Phone, MessageSquare } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Save, Percent, Flower2, MessageCircle, Bell, Mail, Phone, MessageSquare, Plus, Edit, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { NotificationChannel } from "@shared/schema";
 import { useApp } from "@/context/AppContext";
 import { useChatbot } from "@/context/ChatbotContext";
@@ -35,6 +38,17 @@ export default function SettingsPage() {
   const [taxPercentage, setTaxPercentage] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState<boolean | null>(null);
   const [showWeight, setShowWeight] = useState<boolean | null>(null);
+
+  const [channelDialogOpen, setChannelDialogOpen] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null);
+  const [channelForm, setChannelForm] = useState({
+    nameVi: "",
+    nameEn: "",
+    type: "EMAIL" as string,
+    descriptionVi: "",
+    descriptionEn: "",
+    status: "ACTIVE" as string,
+  });
 
   const effectiveTaxEnabled = taxEnabled !== null ? taxEnabled : settings.tax_enabled === "true";
   const effectiveTaxPercentage = taxPercentage !== null ? taxPercentage : (settings.tax_percentage || "10");
@@ -60,6 +74,124 @@ export default function SettingsPage() {
       });
     },
   });
+
+  const createChannelMutation = useMutation({
+    mutationFn: async (data: typeof channelForm) => {
+      return apiRequest("POST", "/api/notification-channels", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notification-channels"] });
+      setChannelDialogOpen(false);
+      resetChannelForm();
+      toast({
+        title: language === "vi" ? "Đã tạo kênh" : "Channel created",
+        description: language === "vi" ? "Kênh thông báo đã được tạo thành công" : "Notification channel created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "vi" ? "Lỗi" : "Error",
+        description: language === "vi" ? "Không thể tạo kênh" : "Could not create channel",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateChannelMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof channelForm }) => {
+      return apiRequest("PUT", `/api/notification-channels/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notification-channels"] });
+      setChannelDialogOpen(false);
+      setEditingChannel(null);
+      resetChannelForm();
+      toast({
+        title: language === "vi" ? "Đã cập nhật" : "Channel updated",
+        description: language === "vi" ? "Kênh thông báo đã được cập nhật" : "Notification channel updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "vi" ? "Lỗi" : "Error",
+        description: language === "vi" ? "Không thể cập nhật kênh" : "Could not update channel",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteChannelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/notification-channels/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notification-channels"] });
+      toast({
+        title: language === "vi" ? "Đã xóa" : "Channel deleted",
+        description: language === "vi" ? "Kênh thông báo đã được xóa" : "Notification channel deleted",
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "vi" ? "Lỗi" : "Error",
+        description: language === "vi" ? "Không thể xóa kênh" : "Could not delete channel",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetChannelForm = () => {
+    setChannelForm({
+      nameVi: "",
+      nameEn: "",
+      type: "EMAIL",
+      descriptionVi: "",
+      descriptionEn: "",
+      status: "ACTIVE",
+    });
+  };
+
+  const openAddChannel = () => {
+    setEditingChannel(null);
+    resetChannelForm();
+    setChannelDialogOpen(true);
+  };
+
+  const openEditChannel = (channel: NotificationChannel) => {
+    setEditingChannel(channel);
+    setChannelForm({
+      nameVi: channel.nameVi,
+      nameEn: channel.nameEn,
+      type: channel.type,
+      descriptionVi: channel.descriptionVi || "",
+      descriptionEn: channel.descriptionEn || "",
+      status: channel.status,
+    });
+    setChannelDialogOpen(true);
+  };
+
+  const handleSaveChannel = () => {
+    if (editingChannel) {
+      updateChannelMutation.mutate({ id: editingChannel.id, data: channelForm });
+    } else {
+      createChannelMutation.mutate(channelForm);
+    }
+  };
+
+  const toggleChannelStatus = (channel: NotificationChannel) => {
+    const newStatus = channel.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    updateChannelMutation.mutate({
+      id: channel.id,
+      data: {
+        nameVi: channel.nameVi,
+        nameEn: channel.nameEn,
+        type: channel.type,
+        descriptionVi: channel.descriptionVi || "",
+        descriptionEn: channel.descriptionEn || "",
+        status: newStatus,
+      },
+    });
+  };
 
   const handleSave = async () => {
     if (taxEnabled !== null) {
@@ -296,16 +428,22 @@ export default function SettingsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                {language === "vi" ? "Kênh thông báo" : "Notification Channels"}
-              </CardTitle>
-              <CardDescription>
-                {language === "vi"
-                  ? "Cấu hình các kênh gửi thông báo đến khách hàng"
-                  : "Configure notification channels for customer communication"}
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  {language === "vi" ? "Kênh thông báo" : "Notification Channels"}
+                </CardTitle>
+                <CardDescription>
+                  {language === "vi"
+                    ? "Cấu hình các kênh gửi thông báo đến khách hàng"
+                    : "Configure notification channels for customer communication"}
+                </CardDescription>
+              </div>
+              <Button onClick={openAddChannel} data-testid="button-add-channel">
+                <Plus className="h-4 w-4 mr-2" />
+                {language === "vi" ? "Thêm kênh" : "Add Channel"}
+              </Button>
             </CardHeader>
             <CardContent>
               {loadingChannels ? (
@@ -327,6 +465,7 @@ export default function SettingsPage() {
                       <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
                       <TableHead>{language === "vi" ? "Mô tả" : "Description"}</TableHead>
                       <TableHead>{language === "vi" ? "Trạng thái" : "Status"}</TableHead>
+                      <TableHead className="text-right">{language === "vi" ? "Hành động" : "Actions"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -354,6 +493,37 @@ export default function SettingsPage() {
                               : (language === "vi" ? "Tắt" : "Inactive")}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toggleChannelStatus(channel)}
+                              data-testid={`button-toggle-channel-${channel.id}`}
+                            >
+                              <Switch
+                                checked={channel.status === "ACTIVE"}
+                                onCheckedChange={() => toggleChannelStatus(channel)}
+                              />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditChannel(channel)}
+                              data-testid={`button-edit-channel-${channel.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteChannelMutation.mutate(channel.id)}
+                              data-testid={`button-delete-channel-${channel.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -361,6 +531,103 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          <Dialog open={channelDialogOpen} onOpenChange={setChannelDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingChannel
+                    ? (language === "vi" ? "Chỉnh sửa kênh" : "Edit Channel")
+                    : (language === "vi" ? "Thêm kênh mới" : "Add New Channel")}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Loại kênh" : "Channel Type"}</Label>
+                  <Select
+                    value={channelForm.type}
+                    onValueChange={(value) => setChannelForm({ ...channelForm, type: value })}
+                  >
+                    <SelectTrigger data-testid="select-channel-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EMAIL">Email</SelectItem>
+                      <SelectItem value="SMS">SMS</SelectItem>
+                      <SelectItem value="VOICEMAIL">Voicemail</SelectItem>
+                      <SelectItem value="ZALO">Zalo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Tên (Tiếng Việt)" : "Name (Vietnamese)"}</Label>
+                    <Input
+                      value={channelForm.nameVi}
+                      onChange={(e) => setChannelForm({ ...channelForm, nameVi: e.target.value })}
+                      data-testid="input-channel-name-vi"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Tên (Tiếng Anh)" : "Name (English)"}</Label>
+                    <Input
+                      value={channelForm.nameEn}
+                      onChange={(e) => setChannelForm({ ...channelForm, nameEn: e.target.value })}
+                      data-testid="input-channel-name-en"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Mô tả (Tiếng Việt)" : "Description (Vietnamese)"}</Label>
+                    <Textarea
+                      value={channelForm.descriptionVi}
+                      onChange={(e) => setChannelForm({ ...channelForm, descriptionVi: e.target.value })}
+                      data-testid="input-channel-desc-vi"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Mô tả (Tiếng Anh)" : "Description (English)"}</Label>
+                    <Textarea
+                      value={channelForm.descriptionEn}
+                      onChange={(e) => setChannelForm({ ...channelForm, descriptionEn: e.target.value })}
+                      data-testid="input-channel-desc-en"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Trạng thái" : "Status"}</Label>
+                  <Select
+                    value={channelForm.status}
+                    onValueChange={(value) => setChannelForm({ ...channelForm, status: value })}
+                  >
+                    <SelectTrigger data-testid="select-channel-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">{language === "vi" ? "Hoạt động" : "Active"}</SelectItem>
+                      <SelectItem value="INACTIVE">{language === "vi" ? "Tắt" : "Inactive"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setChannelDialogOpen(false)}>
+                  {language === "vi" ? "Hủy" : "Cancel"}
+                </Button>
+                <Button
+                  onClick={handleSaveChannel}
+                  disabled={!channelForm.nameVi || !channelForm.nameEn || createChannelMutation.isPending || updateChannelMutation.isPending}
+                  data-testid="button-save-channel"
+                >
+                  {(createChannelMutation.isPending || updateChannelMutation.isPending) && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {language === "vi" ? "Lưu" : "Save"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
           </main>
