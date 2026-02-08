@@ -9,6 +9,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { getOrCreateConversation, getChatMessages, streamChatResponse, getConversationById } from "./chatbot";
+import { cache, CACHE_KEYS, CACHE_TTL } from "./cache";
 
 function generatePremadePotTags(data: any): string[] {
   const tags: string[] = [];
@@ -167,7 +168,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Catalog routes
   app.get("/api/catalog", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.CATALOG_ITEMS);
+      if (cached) return res.json(cached);
       const items = await storage.getCatalogItems();
+      cache.set(CACHE_KEYS.CATALOG_ITEMS, items, CACHE_TTL.MEDIUM);
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch catalog" });
@@ -177,7 +181,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Pot Types
   app.get("/api/pot-types", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.POT_TYPES);
+      if (cached) return res.json(cached);
       const types = await storage.getPotTypes();
+      cache.set(CACHE_KEYS.POT_TYPES, types, CACHE_TTL.LONG);
       res.json(types);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pot types" });
@@ -187,7 +194,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Decoration Types
   app.get("/api/decoration-types", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.DECORATION_TYPES);
+      if (cached) return res.json(cached);
       const types = await storage.getDecorationTypes();
+      cache.set(CACHE_KEYS.DECORATION_TYPES, types, CACHE_TTL.LONG);
       res.json(types);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch decoration types" });
@@ -198,6 +208,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const data = insertCatalogItemSchema.parse(req.body);
       const item = await storage.createCatalogItem(data);
+      cache.invalidate(CACHE_KEYS.CATALOG_ITEMS);
       res.status(201).json(item);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Invalid data" });
@@ -210,6 +221,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!item) {
         return res.status(404).json({ error: "Item not found" });
       }
+      cache.invalidate(CACHE_KEYS.CATALOG_ITEMS);
       res.json(item);
     } catch (error) {
       res.status(500).json({ error: "Failed to update" });
@@ -219,6 +231,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/catalog/:id", async (req, res) => {
     try {
       await storage.deleteCatalogItem(req.params.id);
+      cache.invalidate(CACHE_KEYS.CATALOG_ITEMS);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete" });
@@ -228,6 +241,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Premade pots routes
   app.get("/api/premade-pots", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.ALL_POTS);
+      if (cached) return res.json(cached);
       const pots = await storage.getPremadePots();
       const enriched = pots.map((pot: any) => {
         if (!pot.tags || pot.tags.length === 0) {
@@ -235,6 +250,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
         return pot;
       });
+      cache.set(CACHE_KEYS.ALL_POTS, enriched, CACHE_TTL.MEDIUM);
       res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pots" });
@@ -243,6 +259,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shop/pots", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.ACTIVE_POTS);
+      if (cached) return res.json(cached);
       const pots = await storage.getActivePremadePots();
       const enriched = pots.map((pot: any) => {
         if (!pot.tags || pot.tags.length === 0) {
@@ -250,6 +268,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
         return pot;
       });
+      cache.set(CACHE_KEYS.ACTIVE_POTS, enriched, CACHE_TTL.MEDIUM);
       res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pots" });
@@ -263,6 +282,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         data.tags = generatePremadePotTags(data);
       }
       const pot = await storage.createPremadePot(data);
+      cache.invalidate(CACHE_KEYS.ALL_POTS);
+      cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
       res.status(201).json(pot);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Invalid data" });
@@ -279,6 +300,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!pot) {
         return res.status(404).json({ error: "Pot not found" });
       }
+      cache.invalidate(CACHE_KEYS.ALL_POTS);
+      cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
       res.json(pot);
     } catch (error) {
       res.status(500).json({ error: "Failed to update" });
@@ -288,6 +311,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/premade-pots/:id", async (req, res) => {
     try {
       await storage.deletePremadePot(req.params.id);
+      cache.invalidate(CACHE_KEYS.ALL_POTS);
+      cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete" });
@@ -477,6 +502,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         totalSpent: String(Number(customer.totalSpent) + serverTotal),
       });
       
+      cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       res.status(201).json({
         orderNumber: order.orderNumber,
         trackingToken: order.trackingToken,
@@ -494,6 +520,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
+      cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update status" });
@@ -516,6 +543,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
       
+      cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to assign technician" });
@@ -530,6 +558,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
+      cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update payment" });
@@ -543,6 +572,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
+      cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to cancel order" });
@@ -552,7 +582,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Shipping types routes
   app.get("/api/shipping-types", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.SHIPPING_TYPES);
+      if (cached) return res.json(cached);
       const types = await storage.getShippingTypes();
+      cache.set(CACHE_KEYS.SHIPPING_TYPES, types, CACHE_TTL.LONG);
       res.json(types);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch shipping types" });
@@ -562,7 +595,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Dashboard routes
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.DASHBOARD_STATS);
+      if (cached) return res.json(cached);
       const stats = await storage.getDashboardStats();
+      cache.set(CACHE_KEYS.DASHBOARD_STATS, stats, CACHE_TTL.SHORT);
       res.json(stats);
     } catch (error) {
       console.error("Dashboard stats error:", error);
@@ -573,9 +609,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {
+      const cached = cache.get(CACHE_KEYS.SETTINGS);
+      if (cached) return res.json(cached);
       const allSettings = await storage.getAllSettings();
       const settingsMap: Record<string, string> = {};
       allSettings.forEach(s => { settingsMap[s.key] = s.value; });
+      cache.set(CACHE_KEYS.SETTINGS, settingsMap, CACHE_TTL.LONG);
       res.json(settingsMap);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch settings" });
@@ -636,6 +675,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const updated = await storage.updateSetting(key, value);
+      cache.invalidate(CACHE_KEYS.SETTINGS);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update setting" });
@@ -784,21 +824,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ==================== POT TYPES CRUD ====================
-  app.get("/api/pot-types", async (req, res) => {
-    try {
-      const items = await storage.getPotTypes();
-      res.json(items);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch pot types" });
-    }
-  });
-
   app.post("/api/pot-types", async (req, res) => {
     try {
       if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createPotType(req.body);
+      cache.invalidate(CACHE_KEYS.POT_TYPES);
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create pot type" });
@@ -812,6 +844,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const updated = await storage.updatePotType(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Not found" });
+      cache.invalidate(CACHE_KEYS.POT_TYPES);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update pot type" });
@@ -824,6 +857,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deletePotType(req.params.id);
+      cache.invalidate(CACHE_KEYS.POT_TYPES);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete pot type" });
@@ -831,14 +865,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ==================== DECORATION TYPES CRUD ====================
-  app.get("/api/decoration-types", async (req, res) => {
-    try {
-      const items = await storage.getDecorationTypes();
-      res.json(items);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch decoration types" });
-    }
-  });
 
   app.post("/api/decoration-types", async (req, res) => {
     try {
@@ -846,6 +872,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createDecorationType(req.body);
+      cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create decoration type" });
@@ -859,6 +886,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const updated = await storage.updateDecorationType(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Not found" });
+      cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update decoration type" });
@@ -871,6 +899,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deleteDecorationType(req.params.id);
+      cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete decoration type" });
@@ -1360,6 +1389,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const { priorityId } = req.body;
       const order = await storage.updateOrder(req.params.id, { priorityId });
+      cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update order priority" });

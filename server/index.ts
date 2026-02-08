@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import compression from "compression";
 
 const app = express();
 const httpServer = createServer(app);
@@ -11,6 +12,8 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+app.use(compression());
 
 app.use(
   express.json({

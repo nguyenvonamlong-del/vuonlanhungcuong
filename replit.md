@@ -4,6 +4,12 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-08**: Performance Optimizations for Concurrent Users:
+  - **Database pool**: Increased connection pool to 20 max connections with idle/connection timeouts
+  - **In-memory caching**: Added server-side cache for catalog, pot types, decoration types, shop pots, settings, shipping types, dashboard stats with automatic invalidation on mutations
+  - **Response compression**: Added gzip/deflate compression middleware to reduce API payload sizes
+  - Cache layer: `server/cache.ts` with configurable TTLs (SHORT=30s, MEDIUM=120s, LONG=300s)
+
 - **2026-02-08**: Landing Page & Admin Enhancements:
   - **Product Showcase on Landing**: Horizontal scrollable carousel of premade products with media thumbnails (video priority) displayed right below hero CTA buttons
   - **Bulk Video Upload**: Admin can bulk-upload multiple videos at once from Premade Pots page; each video creates an INACTIVE placeholder pot entry for later editing
