@@ -159,11 +159,11 @@ function ProductShowcase({ language }: { language: string }) {
 
   return (
     <div data-testid="section-product-showcase">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold mb-2">
+      <div className="text-center mb-3">
+        <h2 className="text-lg md:text-xl font-bold mb-1">
           {language === "vi" ? "Sản phẩm nổi bật" : "Featured Products"}
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-xs md:text-sm text-muted-foreground">
           {language === "vi"
             ? "Khám phá bộ sưu tập lan hồ điệp tuyệt đẹp của chúng tôi"
             : "Explore our beautiful phalaenopsis orchid collection"}
@@ -202,12 +202,12 @@ function ProductShowcase({ language }: { language: string }) {
           ))}
         </div>
       </div>
-      <div className="text-center mt-6">
+      <div className="text-center mt-3">
         <Link href="/shop">
-          <Button variant="outline" className="gap-2" data-testid="button-view-all-products">
-            <ShoppingCart className="h-4 w-4" />
+          <Button size="sm" variant="outline" className="gap-2" data-testid="button-view-all-products">
+            <ShoppingCart className="h-3.5 w-3.5" />
             {language === "vi" ? "Xem tất cả sản phẩm" : "View All Products"}
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </Link>
       </div>
@@ -222,75 +222,63 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <PublicHeader />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-orchid-100 via-orchid-50 to-background dark:from-orchid-900/20 dark:via-orchid-800/10 dark:to-background">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239333EA%22 fill-opacity=%220.05%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50 dark:opacity-30" />
-        <div className="container mx-auto px-4 py-16 md:py-20 relative">
-          <div className="max-w-3xl mx-auto text-center space-y-5">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-medium text-sm">
-              <Flower2 className="h-4 w-4" />
-              {language === "vi" ? "Lan Hồ Điệp Cao Cấp" : "Premium Phalaenopsis"}
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+      <section className="bg-gradient-to-b from-orchid-50 to-background dark:from-orchid-900/10 dark:to-background" data-testid="section-center-actions">
+        <div className="container mx-auto px-4 pt-6 pb-4 md:pt-8 md:pb-6">
+          <div className="text-center mb-4 md:mb-5">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
               {t("landing.heroTitle", language)}
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               {t("landing.heroSubtitle", language)}
             </p>
           </div>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
-      </section>
 
-      <section className="py-10 md:py-14 bg-background" data-testid="section-center-actions">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto space-y-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
-              <Link href="/shop">
-                <Card className="hover-elevate group h-full">
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <ShoppingCart className="h-7 w-7 text-primary" />
-                    </div>
-                    <h3 className="font-bold text-lg">
-                      {language === "vi" ? "Chậu Lan Có Sẵn" : "Premade Products"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {language === "vi"
-                        ? "Khám phá bộ sưu tập lan hồ điệp đã được trang trí sẵn"
-                        : "Browse our collection of ready-made orchid arrangements"}
-                    </p>
-                    <Button className="gap-2 mt-auto" data-testid="button-hero-cta">
-                      {language === "vi" ? "Xem sản phẩm" : "Browse Products"}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
-              <Link href="/checkout">
-                <Card className="hover-elevate group h-full">
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <Palette className="h-7 w-7 text-primary" />
-                    </div>
-                    <h3 className="font-bold text-lg">
-                      {language === "vi" ? "Đặt Chậu Riêng" : "Custom Order"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {language === "vi"
-                        ? "Tự thiết kế chậu lan theo ý thích với các loại lan và phụ kiện"
-                        : "Design your own arrangement with your choice of orchids and accessories"}
-                    </p>
-                    <Button variant="outline" className="gap-2 mt-auto" data-testid="button-custom-order">
-                      {language === "vi" ? "Bắt đầu thiết kế" : "Start Designing"}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
-
-            <ProductShowcase language={language} />
+          <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto mb-5 md:mb-6">
+            <Link href="/shop">
+              <Card className="hover-elevate group h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-sm md:text-base">
+                    {language === "vi" ? "Chậu Lan Có Sẵn" : "Premade Products"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground hidden sm:block">
+                    {language === "vi"
+                      ? "Bộ sưu tập lan hồ điệp trang trí sẵn"
+                      : "Ready-made orchid arrangements"}
+                  </p>
+                  <Button size="sm" className="gap-1.5 mt-auto" data-testid="button-hero-cta">
+                    {language === "vi" ? "Xem sản phẩm" : "Browse"}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/checkout">
+              <Card className="hover-elevate group h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <Palette className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-sm md:text-base">
+                    {language === "vi" ? "Đặt Chậu Riêng" : "Custom Order"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground hidden sm:block">
+                    {language === "vi"
+                      ? "Thiết kế chậu lan theo ý thích"
+                      : "Design your own arrangement"}
+                  </p>
+                  <Button size="sm" variant="outline" className="gap-1.5 mt-auto" data-testid="button-custom-order">
+                    {language === "vi" ? "Bắt đầu" : "Start"}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
+
+          <ProductShowcase language={language} />
         </div>
       </section>
 
