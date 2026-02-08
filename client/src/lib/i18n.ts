@@ -44,8 +44,8 @@ export const translations = {
     feature4Desc: { vi: 'Tư vấn chăm sóc lan miễn phí', en: 'Free orchid care consultation' },
     aboutTitle: { vi: 'Về chúng tôi', en: 'About Us' },
     aboutDesc: { 
-      vi: 'Với hơn 10 năm kinh nghiệm trong ngành lan, chúng tôi tự hào mang đến những chậu lan đẹp nhất cho khách hàng.', 
-      en: 'With over 10 years of experience in the orchid industry, we pride ourselves on delivering the most beautiful orchids to our customers.' 
+      vi: 'Với hơn 20 năm kinh nghiệm trong ngành lan, chúng tôi tự hào mang đến những chậu lan đẹp nhất cho khách hàng.', 
+      en: 'With over 20 years of experience in the orchid industry, we pride ourselves on delivering the most beautiful orchids to our customers.' 
     },
     testimonialsTitle: { vi: 'Khách hàng nói gì', en: 'What Customers Say' },
     contactTitle: { vi: 'Liên hệ', en: 'Contact Us' },
