@@ -29,7 +29,7 @@ export function PublicHeader() {
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <Link href="/" className="flex items-center gap-2">
           <img src="/assets/logo.png" alt="Hùng Cường" className="h-10 w-10 rounded-lg object-contain" />
-          <span className="hidden font-semibold text-lg sm:inline-block">
+          <span className="hidden font-semibold text-lg sm:inline-block whitespace-nowrap">
             {t("landing.heroTitle", language)}
           </span>
         </Link>
