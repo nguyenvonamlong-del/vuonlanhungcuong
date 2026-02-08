@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, ShoppingCart } from "lucide-react";
+import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, ShoppingCart, Palette } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +47,83 @@ const testimonials = [
   },
 ];
 
+function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const hasVideo = (pot as any).videos?.length > 0;
+  const hasImage = (pot.images?.length ?? 0) > 0;
+
+  const handlePlayToggle = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+    } else {
+      video.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {
+        setIsPlaying(false);
+      });
+    }
+  }, [isPlaying]);
+
+  return (
+    <div
+      className="shrink-0 w-64 md:w-72 snap-start rounded-lg bg-card border cursor-pointer"
+      data-testid={`showcase-product-${pot.id}`}
+    >
+      <div className="relative aspect-[4/3] bg-muted rounded-t-lg overflow-hidden">
+        {hasVideo ? (
+          <>
+            <video
+              ref={videoRef}
+              src={(pot as any).videos[0]}
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+              loop
+              preload="metadata"
+              data-testid={`showcase-video-${pot.id}`}
+              onEnded={() => setIsPlaying(false)}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (isPlaying) { videoRef.current?.pause(); setIsPlaying(false); } }}
+            />
+            <button
+              onClick={handlePlayToggle}
+              aria-label={isPlaying ? "Pause video" : "Play video"}
+              className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity"
+              style={{ opacity: isPlaying ? 0 : 1, pointerEvents: isPlaying ? "none" : "auto" }}
+              data-testid={`button-play-${pot.id}`}
+            >
+              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                <Play className="h-5 w-5 text-foreground fill-foreground ml-0.5" />
+              </div>
+            </button>
+          </>
+        ) : hasImage ? (
+          <img
+            src={pot.images![0]}
+            alt={language === "vi" ? pot.nameVi : pot.nameEn}
+            className="w-full h-full object-cover"
+            data-testid={`showcase-img-${pot.id}`}
+          />
+        ) : null}
+      </div>
+      <div className="p-3 space-y-1">
+        <h3 className="font-semibold text-sm line-clamp-1" data-testid={`showcase-name-${pot.id}`}>
+          {language === "vi" ? pot.nameVi : pot.nameEn}
+        </h3>
+        <p className="text-sm font-bold" data-testid={`showcase-price-${pot.id}`}>
+          {formatCurrency(pot.price, language as any)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ProductShowcase({ language }: { language: string }) {
   const { data: pots = [] } = useQuery<PremadePot[]>({
     queryKey: ["/api/shop/pots"],
@@ -81,106 +158,60 @@ function ProductShowcase({ language }: { language: string }) {
   if (activePots.length === 0) return null;
 
   return (
-    <section className="py-12 md:py-16 bg-background" data-testid="section-product-showcase">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold mb-2">
-            {language === "vi" ? "Sản phẩm nổi bật" : "Featured Products"}
-          </h2>
-          <p className="text-muted-foreground">
-            {language === "vi"
-              ? "Khám phá bộ sưu tập lan hồ điệp tuyệt đẹp của chúng tôi"
-              : "Explore our beautiful phalaenopsis orchid collection"}
-          </p>
-        </div>
-        <div className="relative">
-          {canScrollLeft && (
-            <Button
-              size="icon"
-              variant="outline"
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10"
-              onClick={() => scroll("left")}
-              data-testid="button-showcase-prev"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          )}
-          {canScrollRight && (
-            <Button
-              size="icon"
-              variant="outline"
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
-              onClick={() => scroll("right")}
-              data-testid="button-showcase-next"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          )}
-          <div
-            ref={scrollRef}
-            className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    <div data-testid="section-product-showcase">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold mb-2">
+          {language === "vi" ? "Sản phẩm nổi bật" : "Featured Products"}
+        </h2>
+        <p className="text-muted-foreground">
+          {language === "vi"
+            ? "Khám phá bộ sưu tập lan hồ điệp tuyệt đẹp của chúng tôi"
+            : "Explore our beautiful phalaenopsis orchid collection"}
+        </p>
+      </div>
+      <div className="relative">
+        {canScrollLeft && (
+          <Button
+            size="icon"
+            variant="outline"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10"
+            onClick={() => scroll("left")}
+            data-testid="button-showcase-prev"
           >
-            {activePots.map((pot) => {
-              const hasVideo = (pot as any).videos?.length > 0;
-              const hasImage = (pot.images?.length ?? 0) > 0;
-              return (
-                <Link key={pot.id} href="/shop">
-                  <div
-                    className="shrink-0 w-64 md:w-72 snap-start rounded-lg bg-card border cursor-pointer"
-                    data-testid={`showcase-product-${pot.id}`}
-                  >
-                    <div className="relative aspect-[4/3] bg-muted">
-                      {hasVideo ? (
-                        <video
-                          src={(pot as any).videos[0]}
-                          className="w-full h-full object-cover"
-                          muted
-                          playsInline
-                          loop
-                          autoPlay
-                          data-testid={`showcase-video-${pot.id}`}
-                        />
-                      ) : hasImage ? (
-                        <img
-                          src={pot.images![0]}
-                          alt={language === "vi" ? pot.nameVi : pot.nameEn}
-                          className="w-full h-full object-cover"
-                          data-testid={`showcase-img-${pot.id}`}
-                        />
-                      ) : null}
-                      {hasVideo && (
-                        <Badge variant="secondary" className="absolute top-2 right-2 gap-1 text-xs">
-                          <Play className="h-3 w-3" />
-                          Video
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="p-3 space-y-1">
-                      <h3 className="font-semibold text-sm line-clamp-1" data-testid={`showcase-name-${pot.id}`}>
-                        {language === "vi" ? pot.nameVi : pot.nameEn}
-                      </h3>
-                      <p className="text-sm font-bold" data-testid={`showcase-price-${pot.id}`}>
-                        {formatCurrency(pot.price, language as any)}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-        <div className="text-center mt-6">
-          <Link href="/shop">
-            <Button variant="outline" className="gap-2" data-testid="button-view-all-products">
-              <ShoppingCart className="h-4 w-4" />
-              {language === "vi" ? "Xem tất cả sản phẩm" : "View All Products"}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+        {canScrollRight && (
+          <Button
+            size="icon"
+            variant="outline"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
+            onClick={() => scroll("right")}
+            data-testid="button-showcase-next"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {activePots.map((pot) => (
+            <VideoCard key={pot.id} pot={pot} language={language} />
+          ))}
         </div>
       </div>
-    </section>
+      <div className="text-center mt-6">
+        <Link href="/shop">
+          <Button variant="outline" className="gap-2" data-testid="button-view-all-products">
+            <ShoppingCart className="h-4 w-4" />
+            {language === "vi" ? "Xem tất cả sản phẩm" : "View All Products"}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -193,8 +224,8 @@ export default function LandingPage() {
 
       <section className="relative overflow-hidden bg-gradient-to-br from-orchid-100 via-orchid-50 to-background dark:from-orchid-900/20 dark:via-orchid-800/10 dark:to-background">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239333EA%22 fill-opacity=%220.05%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50 dark:opacity-30" />
-        <div className="container mx-auto px-4 py-24 md:py-32 relative">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
+        <div className="container mx-auto px-4 py-16 md:py-20 relative">
+          <div className="max-w-3xl mx-auto text-center space-y-5">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-medium text-sm">
               <Flower2 className="h-4 w-4" />
               {language === "vi" ? "Lan Hồ Điệp Cao Cấp" : "Premium Phalaenopsis"}
@@ -205,30 +236,68 @@ export default function LandingPage() {
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               {t("landing.heroSubtitle", language)}
             </p>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center pt-4">
-              <Link href="/shop">
-                <Button size="lg" className="gap-2 text-base" data-testid="button-hero-cta">
-                  {t("landing.heroCta", language)}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/checkout">
-                <Button size="lg" variant="outline" className="gap-2 text-base" data-testid="button-custom-order">
-                  {language === "vi" ? "Đặt chậu riêng" : "Custom Order"}
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
       </section>
 
-      <ProductShowcase language={language} />
-
-      <section className="py-20 md:py-28 bg-background">
+      <section className="py-10 md:py-14 bg-background" data-testid="section-center-actions">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <div className="max-w-4xl mx-auto space-y-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
+              <Link href="/shop">
+                <Card className="hover-elevate group h-full">
+                  <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <ShoppingCart className="h-7 w-7 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-lg">
+                      {language === "vi" ? "Chậu Lan Có Sẵn" : "Premade Products"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {language === "vi"
+                        ? "Khám phá bộ sưu tập lan hồ điệp đã được trang trí sẵn"
+                        : "Browse our collection of ready-made orchid arrangements"}
+                    </p>
+                    <Button className="gap-2 mt-auto" data-testid="button-hero-cta">
+                      {language === "vi" ? "Xem sản phẩm" : "Browse Products"}
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link href="/checkout">
+                <Card className="hover-elevate group h-full">
+                  <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Palette className="h-7 w-7 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-lg">
+                      {language === "vi" ? "Đặt Chậu Riêng" : "Custom Order"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {language === "vi"
+                        ? "Tự thiết kế chậu lan theo ý thích với các loại lan và phụ kiện"
+                        : "Design your own arrangement with your choice of orchids and accessories"}
+                    </p>
+                    <Button variant="outline" className="gap-2 mt-auto" data-testid="button-custom-order">
+                      {language === "vi" ? "Bắt đầu thiết kế" : "Start Designing"}
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+
+            <ProductShowcase language={language} />
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 md:py-20 bg-card/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">
               {t("landing.featuresTitle", language)}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -253,7 +322,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 md:py-28 bg-card">
+      <section className="py-16 md:py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
@@ -312,10 +381,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 md:py-28 bg-background">
+      <section className="py-16 md:py-20 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">
               {t("landing.testimonialsTitle", language)}
             </h2>
           </div>
@@ -351,11 +420,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 md:py-28 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+      <section className="py-16 md:py-20 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">
                 {t("landing.contactTitle", language)}
               </h2>
               <p className="text-muted-foreground">
@@ -405,7 +474,7 @@ export default function LandingPage() {
 
       <footer className="py-8 border-t bg-background">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src="/assets/logo.png" alt="Hùng Cường" className="h-8 w-8 rounded-lg object-contain" />
               <span className="font-semibold">{t("landing.heroTitle", language)}</span>
