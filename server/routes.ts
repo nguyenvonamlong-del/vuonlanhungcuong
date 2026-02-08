@@ -1271,9 +1271,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!currentUser || currentUser.role !== "ADMIN") {
         return res.status(403).json({ error: "Admin access required" });
       }
-      // Don't allow changing own account status
-      if (req.params.id === (req.session as any).userId && req.body.status) {
-        return res.status(400).json({ error: "Cannot change your own status" });
+      // Don't allow changing own account status or role
+      if (req.params.id === (req.session as any).userId) {
+        const existingUser = await storage.getUserById(req.params.id);
+        if (existingUser && req.body.status && req.body.status !== existingUser.status) {
+          return res.status(400).json({ error: "Cannot change your own status" });
+        }
+        if (existingUser && req.body.role && req.body.role !== existingUser.role) {
+          return res.status(400).json({ error: "Cannot change your own role" });
+        }
       }
       // Validate using partial schema - schema enforces role and status enums
       const updateUserSchema = insertUserSchema.partial().omit({ username: true });

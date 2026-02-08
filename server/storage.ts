@@ -439,12 +439,12 @@ export class DatabaseStorage implements IStorage {
       
       revenueByDay.push({
         date: dateStr,
-        revenue: Number(dayRevenue?.total) || Math.floor(Math.random() * 5000000) + 1000000,
+        revenue: Number(dayRevenue?.total) || 0,
       });
     }
 
     return {
-      totalRevenue: Number(revenueResult?.total) || revenueByDay.reduce((sum, d) => sum + d.revenue, 0),
+      totalRevenue: Number(revenueResult?.total) || 0,
       totalOrders: ordersCount?.count || 0,
       activeTechnicians: techCount?.count || 0,
       lowStockItems: lowStock?.count || 0,
