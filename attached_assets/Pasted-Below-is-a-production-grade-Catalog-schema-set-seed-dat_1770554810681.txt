@@ -1,0 +1,804 @@
+Below is a **production-grade Catalog schema set** + **seed data** you can load into Postgres/Mongo/Firestore (or use as fixtures in TDD). It is **module-friendly** and matches your i18n approach (**`vi` + `en` required, extensible**).
+
+I’m giving you:
+
+1. `common.schema.json` (final, corrected)
+2. Catalog schemas:
+
+* `catalog.index.schema.json` (one file to validate the whole catalog export)
+* `catalog.orchidType.schema.json`
+* `catalog.potType.schema.json`
+* `catalog.decorationType.schema.json`
+* `catalog.shipmentType.schema.json`
+* `catalog.promotion.schema.json`
+
+3. `catalog.seed.json` (seed dataset including your 12 Vietnamese orchid names)
+
+---
+
+# 1) `common.schema.json` (FINAL)
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/common.schema.json",
+  "title": "Common Types",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "isoDate": { "type": "string", "format": "date" },
+    "isoDateTime": { "type": "string", "format": "date-time" },
+
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+
+    "languageCode": {
+      "type": "string",
+      "description": "Language tag (simple BCP-47 subset). Examples: vi, en, en-US",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+    },
+
+    "localizedString": {
+      "type": "object",
+      "description": "Map language->string. Must include vi and en; can include more later.",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/languageCode" },
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "required": ["vi", "en"]
+    },
+
+    "moneyVND": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "currency": { "type": "string", "enum": ["VND"] },
+        "amount": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["currency", "amount"]
+    },
+
+    "mediaSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "photos": { "type": "array", "items": { "type": "string", "format": "uri" }, "uniqueItems": true },
+        "videos": { "type": "array", "items": { "type": "string", "format": "uri" }, "uniqueItems": true },
+        "spin_360": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "viewer_url": { "type": "string", "format": "uri" },
+            "asset_urls": { "type": "array", "items": { "type": "string", "format": "uri" }, "minItems": 8 }
+          },
+          "required": ["viewer_url", "asset_urls"]
+        }
+      },
+      "required": ["photos", "videos"]
+    }
+  },
+  "properties": {},
+  "required": []
+}
+```
+
+---
+
+# 2) Catalog schemas
+
+## 2.1 `catalog.index.schema.json` (validate a whole catalog export)
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/catalog.index.schema.json",
+  "title": "Catalog Export",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "export_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "exported_at": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "catalog_version": { "type": "integer", "minimum": 1 },
+
+    "orchid_types": {
+      "type": "array",
+      "items": { "$ref": "catalog.orchidType.schema.json" }
+    },
+    "pot_types": {
+      "type": "array",
+      "items": { "$ref": "catalog.potType.schema.json" }
+    },
+    "decoration_types": {
+      "type": "array",
+      "items": { "$ref": "catalog.decorationType.schema.json" }
+    },
+    "shipment_types": {
+      "type": "array",
+      "items": { "$ref": "catalog.shipmentType.schema.json" }
+    },
+    "promotions": {
+      "type": "array",
+      "items": { "$ref": "catalog.promotion.schema.json" }
+    }
+  },
+  "required": ["export_id", "exported_at", "catalog_version", "orchid_types", "pot_types", "decoration_types", "shipment_types", "promotions"]
+}
+```
+
+---
+
+## 2.2 `catalog.orchidType.schema.json`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/catalog.orchidType.schema.json",
+  "title": "Catalog OrchidType",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "orchid_type_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "active": { "type": "boolean" },
+
+    "sku": { "type": "string", "minLength": 6, "maxLength": 64 },
+    "genus": { "type": "string", "enum": ["Phalaenopsis"] },
+
+    "display_name": { "$ref": "common.schema.json#/$defs/localizedString" },
+    "trade_name": { "type": "string", "minLength": 2, "maxLength": 120 },
+
+    "color_code": { "type": "string", "enum": ["WH", "PK", "YL", "GN", "PP", "BL", "RD", "OR"] },
+    "pattern_code": { "type": "string", "enum": ["SL", "SP", "VE", "MP", "ST", "FL"] },
+
+    "size_options": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "number", "minimum": 0.1 },
+      "uniqueItems": true
+    },
+
+    "media": { "$ref": "common.schema.json#/$defs/mediaSet" },
+
+    "cost_per_stem": { "$ref": "common.schema.json#/$defs/moneyVND" },
+    "base_price_per_stem": { "$ref": "common.schema.json#/$defs/moneyVND" },
+
+    "tags": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "uniqueItems": true },
+
+    "created_at": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/isoDateTime" }
+  },
+  "required": [
+    "orchid_type_id",
+    "active",
+    "sku",
+    "genus",
+    "display_name",
+    "trade_name",
+    "color_code",
+    "pattern_code",
+    "size_options",
+    "media",
+    "cost_per_stem",
+    "base_price_per_stem",
+    "tags",
+    "created_at",
+    "updated_at"
+  ]
+}
+```
+
+---
+
+## 2.3 `catalog.potType.schema.json`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/catalog.potType.schema.json",
+  "title": "Catalog PotType",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "pot_type_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "active": { "type": "boolean" },
+
+    "sku": { "type": "string", "minLength": 6, "maxLength": 64 },
+
+    "display_name": { "$ref": "common.schema.json#/$defs/localizedString" },
+    "trade_name": { "type": "string", "minLength": 2, "maxLength": 120 },
+
+    "height_category": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+    "height_cm": { "type": "number", "minimum": 1 },
+
+    "shape": { "type": "string", "maxLength": 80 },
+    "color": { "type": "string", "maxLength": 80 },
+    "origin": { "type": "string", "maxLength": 120 },
+    "material_type": { "type": "string", "maxLength": 120 },
+
+    "price_band": { "type": "string", "enum": ["BUDGET", "MID", "PREMIUM", "LUXURY"] },
+
+    "media": { "$ref": "common.schema.json#/$defs/mediaSet" },
+
+    "cost": { "$ref": "common.schema.json#/$defs/moneyVND" },
+    "base_price": { "$ref": "common.schema.json#/$defs/moneyVND" },
+
+    "tags": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "uniqueItems": true },
+
+    "created_at": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/isoDateTime" }
+  },
+  "required": [
+    "pot_type_id",
+    "active",
+    "sku",
+    "display_name",
+    "trade_name",
+    "height_category",
+    "height_cm",
+    "shape",
+    "color",
+    "origin",
+    "material_type",
+    "price_band",
+    "media",
+    "cost",
+    "base_price",
+    "tags",
+    "created_at",
+    "updated_at"
+  ]
+}
+```
+
+---
+
+## 2.4 `catalog.decorationType.schema.json`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/catalog.decorationType.schema.json",
+  "title": "Catalog DecorationType",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decoration_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "active": { "type": "boolean" },
+
+    "sku": { "type": "string", "minLength": 6, "maxLength": 64 },
+    "category": { "type": "string", "maxLength": 80 },
+
+    "display_name": { "$ref": "common.schema.json#/$defs/localizedString" },
+    "trade_name": { "type": "string", "minLength": 2, "maxLength": 120 },
+
+    "media": { "$ref": "common.schema.json#/$defs/mediaSet" },
+
+    "cost": { "$ref": "common.schema.json#/$defs/moneyVND" },
+    "price": { "$ref": "common.schema.json#/$defs/moneyVND" },
+
+    "tags": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "uniqueItems": true },
+
+    "created_at": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/isoDateTime" }
+  },
+  "required": ["decoration_id", "active", "sku", "category", "display_name", "trade_name", "media", "cost", "price", "tags", "created_at", "updated_at"]
+}
+```
+
+---
+
+## 2.5 `catalog.shipmentType.schema.json`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/catalog.shipmentType.schema.json",
+  "title": "Catalog ShipmentType",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "shipment_type_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "version": { "type": "integer", "minimum": 1 },
+    "active": { "type": "boolean" },
+
+    "display_name": { "$ref": "common.schema.json#/$defs/localizedString" },
+    "description": { "$ref": "common.schema.json#/$defs/localizedString" },
+
+    "supported_channels": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["WEB", "CHATBOT"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+
+    "eta_days_min": { "type": "integer", "minimum": 0 },
+    "eta_days_max": { "type": "integer", "minimum": 0 },
+
+    "fee": { "$ref": "common.schema.json#/$defs/moneyVND" },
+
+    "priority_class": { "type": "string", "enum": ["NORMAL", "VIP", "URGENT"] },
+
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "countries": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "province_allowlist": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      },
+      "required": ["countries"]
+    },
+
+    "created_at": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/isoDateTime" }
+  },
+  "required": [
+    "shipment_type_id",
+    "version",
+    "active",
+    "display_name",
+    "description",
+    "supported_channels",
+    "eta_days_min",
+    "eta_days_max",
+    "fee",
+    "priority_class",
+    "eligibility",
+    "created_at",
+    "updated_at"
+  ]
+}
+```
+
+---
+
+## 2.6 `catalog.promotion.schema.json`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orchid-app.example/schemas/catalog.promotion.schema.json",
+  "title": "Catalog Promotion",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "promotion_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "active": { "type": "boolean" },
+
+    "code": { "type": "string", "minLength": 3, "maxLength": 32 },
+
+    "display_name": { "$ref": "common.schema.json#/$defs/localizedString" },
+    "description": { "$ref": "common.schema.json#/$defs/localizedString" },
+
+    "valid_from": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "valid_to": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+
+    "stackable": { "type": "boolean" },
+
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "customer_tiers": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["SILVER", "GOLD", "PLATINUM", "DIAMOND"] },
+          "uniqueItems": true
+        },
+        "min_order_total": { "$ref": "common.schema.json#/$defs/moneyVND" }
+      }
+    },
+
+    "discount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "discount_type": { "type": "string", "enum": ["PERCENT", "FIXED_AMOUNT"] },
+        "percent_bps": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "amount": { "$ref": "common.schema.json#/$defs/moneyVND" },
+        "max_discount_amount": { "$ref": "common.schema.json#/$defs/moneyVND" }
+      },
+      "required": ["discount_type"]
+    },
+
+    "created_at": { "$ref": "common.schema.json#/$defs/isoDateTime" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/isoDateTime" }
+  },
+  "required": ["promotion_id", "active", "code", "display_name", "description", "valid_from", "valid_to", "stackable", "discount", "created_at", "updated_at"]
+}
+```
+
+---
+
+# 3) Seed data: `catalog.seed.json`
+
+This is **ready-to-load**. Media URLs are placeholders; replace with your object storage links.
+
+```json
+{
+  "export_id": "6c6f7e5c-2b6b-4a0f-8e9d-61a7df3bdb6d",
+  "exported_at": "2026-02-08T12:00:00Z",
+  "catalog_version": 1,
+
+  "orchid_types": [
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000001",
+      "active": true,
+      "sku": "PHA-PK-ANN-BR-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Hồng anna phân cành", "en": "Anna Pink Phalaenopsis (Branching)" },
+      "trade_name": "Phalaenopsis Anna Pink Branch 3.5",
+      "color_code": "PK",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pk-ann-br-35-1.jpg"], "videos": [] , "spin_360": null},
+      "cost_per_stem": { "currency": "VND", "amount": 18000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 35000 },
+      "tags": ["anna", "branching", "pink"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000002",
+      "active": true,
+      "sku": "PHA-PK-ANN-DB-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Hồng anna 2 ngồng", "en": "Anna Pink Phalaenopsis (Double Spike)" },
+      "trade_name": "Phalaenopsis Anna Pink Double Spike 3.5",
+      "color_code": "PK",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pk-ann-db-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 18000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 35000 },
+      "tags": ["anna", "double-spike", "pink"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000003",
+      "active": true,
+      "sku": "PHA-PK-MAP-MP-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Hồng bản đồ", "en": "Pink Phalaenopsis (Map Pattern)" },
+      "trade_name": "Phalaenopsis Pink Map Pattern 3.5",
+      "color_code": "PK",
+      "pattern_code": "MP",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pk-map-mp-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 19000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 38000 },
+      "tags": ["map-pattern", "pink"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000004",
+      "active": true,
+      "sku": "PHA-PK-243-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Hồng 243", "en": "Pink Phalaenopsis (Cultivar 243)" },
+      "trade_name": "Phalaenopsis Pink Cultivar 243 3.5",
+      "color_code": "PK",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pk-243-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 20000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 40000 },
+      "tags": ["cultivar-243", "pink"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000005",
+      "active": true,
+      "sku": "PHA-PP-LANT-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Lồng đèn tình nhân", "en": "Lover’s Lantern Phalaenopsis" },
+      "trade_name": "Phalaenopsis Lover's Lantern 3.5",
+      "color_code": "PP",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pp-lant-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 22000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 45000 },
+      "tags": ["novelty", "lantern"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000006",
+      "active": true,
+      "sku": "PHA-PP-DIACHU-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Địa chủ", "en": "Landlord Phalaenopsis (Trade Name)" },
+      "trade_name": "Phalaenopsis 'Địa Chủ' Premium 3.5",
+      "color_code": "PP",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pp-diachu-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 23000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 48000 },
+      "tags": ["premium", "trade-name"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000007",
+      "active": true,
+      "sku": "PHA-YL-SWAN-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Vàng thiên nga", "en": "Golden Swan Phalaenopsis" },
+      "trade_name": "Phalaenopsis Golden Swan Yellow 3.5",
+      "color_code": "YL",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-yl-swan-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 19000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 42000 },
+      "tags": ["yellow", "signature"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000008",
+      "active": true,
+      "sku": "PHA-YL-SNAKE-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Vàng lưỡi rắn", "en": "Yellow Phalaenopsis (Snake Tongue)" },
+      "trade_name": "Phalaenopsis Yellow 'Snake Tongue' 3.5",
+      "color_code": "YL",
+      "pattern_code": "ST",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-yl-snake-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 20000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 43000 },
+      "tags": ["yellow", "stripe"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000009",
+      "active": true,
+      "sku": "PHA-GN-APPLE-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Xanh táo", "en": "Apple Green Phalaenopsis" },
+      "trade_name": "Phalaenopsis Apple Green 3.5",
+      "color_code": "GN",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-gn-apple-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 21000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 45000 },
+      "tags": ["green", "apple"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000010",
+      "active": true,
+      "sku": "PHA-BL-MYTH-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Xanh thần thoại", "en": "Mythical Blue Phalaenopsis" },
+      "trade_name": "Phalaenopsis Mythical Blue 3.5",
+      "color_code": "BL",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-bl-myth-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 21000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 47000 },
+      "tags": ["blue", "novelty"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000011",
+      "active": true,
+      "sku": "PHA-WH-V3-SL-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Trắng v3", "en": "White Phalaenopsis (V3)" },
+      "trade_name": "Phalaenopsis White V3 3.5",
+      "color_code": "WH",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-wh-v3-sl-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 18000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 36000 },
+      "tags": ["white", "classic"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000012",
+      "active": true,
+      "sku": "PHA-PK-PTAI-SG-35",
+      "genus": "Phalaenopsis",
+      "display_name": { "vi": "Hồng phát tài 1 ngồng", "en": "Prosperity Pink Phalaenopsis (Single Spike)" },
+      "trade_name": "Phalaenopsis Prosperity Pink Single Spike 3.5",
+      "color_code": "PK",
+      "pattern_code": "SL",
+      "size_options": [3.5],
+      "media": { "photos": ["https://cdn.example.com/orchid/pha-pk-ptai-sg-35-1.jpg"], "videos": [], "spin_360": null },
+      "cost_per_stem": { "currency": "VND", "amount": 18000 },
+      "base_price_per_stem": { "currency": "VND", "amount": 35000 },
+      "tags": ["prosperity", "pink", "single-spike"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    }
+  ],
+
+  "pot_types": [
+    {
+      "pot_type_id": "2f2b3c4d-2222-4aaa-8bbb-000000000001",
+      "active": true,
+      "sku": "POT-BT-WH-MD-24",
+      "display_name": { "vi": "Chậu Bát Tràng trắng (trung)", "en": "Bat Trang White Pot (Medium)" },
+      "trade_name": "Bat Trang Ceramic Pot White Medium",
+      "height_category": "MEDIUM",
+      "height_cm": 24,
+      "shape": "Cylinder",
+      "color": "White",
+      "origin": "Bat Trang",
+      "material_type": "Ceramic",
+      "price_band": "PREMIUM",
+      "media": { "photos": ["https://cdn.example.com/pot/pot-bt-wh-md-24-1.jpg"], "videos": [], "spin_360": null },
+      "cost": { "currency": "VND", "amount": 45000 },
+      "base_price": { "currency": "VND", "amount": 90000 },
+      "tags": ["bat-trang", "ceramic", "white"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "pot_type_id": "2f2b3c4d-2222-4aaa-8bbb-000000000002",
+      "active": true,
+      "sku": "POT-BD-GY-LW-18",
+      "display_name": { "vi": "Chậu Bình Dương xám (thấp)", "en": "Binh Duong Gray Pot (Low)" },
+      "trade_name": "Binh Duong Pot Gray Low",
+      "height_category": "LOW",
+      "height_cm": 18,
+      "shape": "Bowl",
+      "color": "Gray",
+      "origin": "Binh Duong",
+      "material_type": "Ceramic",
+      "price_band": "MID",
+      "media": { "photos": ["https://cdn.example.com/pot/pot-bd-gy-lw-18-1.jpg"], "videos": [], "spin_360": null },
+      "cost": { "currency": "VND", "amount": 25000 },
+      "base_price": { "currency": "VND", "amount": 60000 },
+      "tags": ["binh-duong", "gray", "low"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    }
+  ],
+
+  "decoration_types": [
+    {
+      "decoration_id": "3f2b3c4d-3333-4aaa-8bbb-000000000001",
+      "active": true,
+      "sku": "DEC-DRIFT-STD",
+      "category": "Driftwood",
+      "display_name": { "vi": "Gỗ lũa", "en": "Driftwood" },
+      "trade_name": "Natural Driftwood",
+      "media": { "photos": ["https://cdn.example.com/decor/dec-drift-1.jpg"], "videos": [], "spin_360": null },
+      "cost": { "currency": "VND", "amount": 8000 },
+      "price": { "currency": "VND", "amount": 20000 },
+      "tags": ["natural", "texture"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "decoration_id": "3f2b3c4d-3333-4aaa-8bbb-000000000002",
+      "active": true,
+      "sku": "DEC-MOSS-STD",
+      "category": "Moss",
+      "display_name": { "vi": "Rêu trang trí", "en": "Decorative Moss" },
+      "trade_name": "Decorative Moss",
+      "media": { "photos": ["https://cdn.example.com/decor/dec-moss-1.jpg"], "videos": [], "spin_360": null },
+      "cost": { "currency": "VND", "amount": 3000 },
+      "price": { "currency": "VND", "amount": 10000 },
+      "tags": ["green", "base-layer"],
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    }
+  ],
+
+  "shipment_types": [
+    {
+      "shipment_type_id": "4f2b3c4d-4444-4aaa-8bbb-000000000001",
+      "version": 1,
+      "active": true,
+      "display_name": { "vi": "Tiêu chuẩn", "en": "Standard" },
+      "description": { "vi": "Giao trong 2–3 ngày", "en": "Delivery in 2–3 days" },
+      "supported_channels": ["WEB", "CHATBOT"],
+      "eta_days_min": 2,
+      "eta_days_max": 3,
+      "fee": { "currency": "VND", "amount": 35000 },
+      "priority_class": "NORMAL",
+      "eligibility": { "countries": ["VN"], "province_allowlist": [] },
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "shipment_type_id": "4f2b3c4d-4444-4aaa-8bbb-000000000002",
+      "version": 1,
+      "active": true,
+      "display_name": { "vi": "Nhanh", "en": "Express" },
+      "description": { "vi": "Giao trong 1–2 ngày", "en": "Delivery in 1–2 days" },
+      "supported_channels": ["WEB", "CHATBOT"],
+      "eta_days_min": 1,
+      "eta_days_max": 2,
+      "fee": { "currency": "VND", "amount": 65000 },
+      "priority_class": "VIP",
+      "eligibility": { "countries": ["VN"], "province_allowlist": [] },
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "shipment_type_id": "4f2b3c4d-4444-4aaa-8bbb-000000000003",
+      "version": 1,
+      "active": true,
+      "display_name": { "vi": "Hỏa tốc", "en": "Urgent" },
+      "description": { "vi": "Ưu tiên xử lý & giao sớm nhất", "en": "Highest priority handling and fastest delivery" },
+      "supported_channels": ["WEB", "CHATBOT"],
+      "eta_days_min": 0,
+      "eta_days_max": 1,
+      "fee": { "currency": "VND", "amount": 120000 },
+      "priority_class": "URGENT",
+      "eligibility": { "countries": ["VN"], "province_allowlist": [] },
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    }
+  ],
+
+  "promotions": [
+    {
+      "promotion_id": "5f2b3c4d-5555-4aaa-8bbb-000000000001",
+      "active": true,
+      "code": "TET2026",
+      "display_name": { "vi": "Ưu đãi Tết 2026", "en": "Tết 2026 Promotion" },
+      "description": { "vi": "Giảm 10% cho đơn hàng dịp Tết", "en": "10% off for Tết season orders" },
+      "valid_from": "2026-01-15T00:00:00Z",
+      "valid_to": "2026-02-20T23:59:59Z",
+      "stackable": false,
+      "eligibility": { "customer_tiers": ["SILVER", "GOLD", "PLATINUM", "DIAMOND"] },
+      "discount": { "discount_type": "PERCENT", "percent_bps": 1000, "max_discount_amount": { "currency": "VND", "amount": 200000 } },
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    },
+    {
+      "promotion_id": "5f2b3c4d-5555-4aaa-8bbb-000000000002",
+      "active": true,
+      "code": "VIPSHIP",
+      "display_name": { "vi": "Freeship VIP", "en": "VIP Free Shipping" },
+      "description": { "vi": "Miễn phí ship cho khách Kim Cương", "en": "Free shipping for Diamond customers" },
+      "valid_from": "2026-02-01T00:00:00Z",
+      "valid_to": "2026-12-31T23:59:59Z",
+      "stackable": true,
+      "eligibility": { "customer_tiers": ["DIAMOND"], "min_order_total": { "currency": "VND", "amount": 1000000 } },
+      "discount": { "discount_type": "FIXED_AMOUNT", "amount": { "currency": "VND", "amount": 35000 } },
+      "created_at": "2026-02-08T12:00:00Z",
+      "updated_at": "2026-02-08T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+# Notes you should enforce in code (TDD-friendly)
+
+### Pricing rules (business logic tests)
+
+* Total stem cost = `sum(stems * orchid.base_price_per_stem)`
+* Pot price = `pot.base_price`
+* Decorations price = `sum(decoration.price)`
+* Promotions apply after subtotal, then shipping discounts if applicable
+* Shipment ETA = `eta_days_min/max` mapped into a promised window
+
+### SKU rules
+
+* Keep SKUs stable and immutable (display names can change; SKU cannot).
+
+---
+
+# If you want the next increment (recommended)
+
+Say “generate premadePot schema + seed” and I’ll add:
+
+* `PreMadePot` catalog item that composes orchid types + pot + decorations + tags + featured
+* SKU generator template function (deterministic)
+* Validation tests (zod schemas derived from JSON schema)
