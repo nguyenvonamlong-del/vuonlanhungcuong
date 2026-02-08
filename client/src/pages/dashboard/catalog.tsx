@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard, Flag } from "lucide-react";
+import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard, Flag, Video, X, Upload, Loader2 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
+import { useUpload } from "@/hooks/use-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,6 +99,42 @@ export default function CatalogPage() {
   const [deleteGenericDialogOpen, setDeleteGenericDialogOpen] = useState(false);
   const [deletingGeneric, setDeletingGeneric] = useState<any | null>(null);
   const [genericDialogType, setGenericDialogType] = useState<CatalogTab>("pot");
+
+  const [orchidVideos, setOrchidVideos] = useState<string[]>([]);
+  const [genericVideos, setGenericVideos] = useState<string[]>([]);
+  const [isUploadingOrchidVideo, setIsUploadingOrchidVideo] = useState(false);
+  const [isUploadingGenericVideo, setIsUploadingGenericVideo] = useState(false);
+  const { uploadFile } = useUpload();
+
+  const handleOrchidVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingOrchidVideo(true);
+    try {
+      const result = await uploadFile(file);
+      if (result?.objectPath) {
+        setOrchidVideos(prev => [...prev, result.objectPath]);
+      }
+    } finally {
+      setIsUploadingOrchidVideo(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleGenericVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingGenericVideo(true);
+    try {
+      const result = await uploadFile(file);
+      if (result?.objectPath) {
+        setGenericVideos(prev => [...prev, result.objectPath]);
+      }
+    } finally {
+      setIsUploadingGenericVideo(false);
+      if (e.target) e.target.value = "";
+    }
+  };
 
   const { data: catalogItems = [], isLoading: loadingOrchids } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
@@ -265,6 +302,7 @@ export default function CatalogPage() {
   const openOrchidCreate = () => {
     setEditingOrchid(null);
     setOrchidForm(initialOrchidForm);
+    setOrchidVideos([]);
     setOrchidDialogOpen(true);
   };
 
@@ -283,15 +321,17 @@ export default function CatalogPage() {
       imageUrl: item.imageUrl || "",
       status: item.status,
     });
+    setOrchidVideos(item.videos || []);
     setOrchidDialogOpen(true);
   };
 
   const handleOrchidSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const formData = { ...orchidForm, videos: orchidVideos };
     if (editingOrchid) {
-      updateOrchidMutation.mutate({ id: editingOrchid.id, data: orchidForm });
+      updateOrchidMutation.mutate({ id: editingOrchid.id, data: formData });
     } else {
-      createOrchidMutation.mutate(orchidForm);
+      createOrchidMutation.mutate(formData);
     }
   };
 
@@ -299,6 +339,7 @@ export default function CatalogPage() {
     setGenericDialogType(type);
     setEditingGeneric(null);
     setGenericForm(initialGenericForm);
+    setGenericVideos([]);
     setGenericDialogOpen(true);
   };
 
@@ -324,6 +365,7 @@ export default function CatalogPage() {
       level: item.level || 1,
       color: item.color || "#808080",
     });
+    setGenericVideos(item.videos || []);
     setGenericDialogOpen(true);
   };
 
@@ -339,6 +381,7 @@ export default function CatalogPage() {
         descriptionEn: genericForm.descriptionEn,
         price: genericForm.price,
         imageUrl: genericForm.imageUrl,
+        videos: genericVideos,
         status: genericForm.status,
       };
     } else if (genericDialogType === "shipping") {
@@ -822,6 +865,50 @@ export default function CatalogPage() {
               onChange={(url) => setOrchidForm({ ...orchidForm, imageUrl: url })}
               label={language === "vi" ? "Hình ảnh" : "Image"}
             />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                {language === "vi" ? "Video sản phẩm" : "Product Videos"}
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {orchidVideos.map((vid, index) => (
+                  <div key={index} className="relative w-24 h-24 rounded-md overflow-visible bg-muted">
+                    <video src={vid} className="w-full h-full object-cover rounded-md" muted />
+                    <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
+                      <Video className="h-5 w-5 text-white" />
+                    </div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full z-10"
+                      onClick={() => setOrchidVideos(prev => prev.filter((_, i) => i !== index))}
+                      data-testid={`button-remove-orchid-video-${index}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <label className="w-24 h-24 rounded-md border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover-elevate">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="video/*"
+                    onChange={handleOrchidVideoUpload}
+                    disabled={isUploadingOrchidVideo}
+                    data-testid="input-orchid-video-upload"
+                  />
+                  {isUploadingOrchidVideo ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <Video className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{language === "vi" ? "Thêm video" : "Add video"}</span>
+                    </>
+                  )}
+                </label>
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{t("catalog.price", language)}</Label>
@@ -906,6 +993,50 @@ export default function CatalogPage() {
                   onChange={(url) => setGenericForm({ ...genericForm, imageUrl: url })}
                   label={language === "vi" ? "Hình ảnh" : "Image"}
                 />
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Video className="h-4 w-4" />
+                    {language === "vi" ? "Video sản phẩm" : "Product Videos"}
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {genericVideos.map((vid, index) => (
+                      <div key={index} className="relative w-24 h-24 rounded-md overflow-visible bg-muted">
+                        <video src={vid} className="w-full h-full object-cover rounded-md" muted />
+                        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
+                          <Video className="h-5 w-5 text-white" />
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-5 w-5 rounded-full z-10"
+                          onClick={() => setGenericVideos(prev => prev.filter((_, i) => i !== index))}
+                          data-testid={`button-remove-generic-video-${index}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                    <label className="w-24 h-24 rounded-md border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover-elevate">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="video/*"
+                        onChange={handleGenericVideoUpload}
+                        disabled={isUploadingGenericVideo}
+                        data-testid="input-generic-video-upload"
+                      />
+                      {isUploadingGenericVideo ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      ) : (
+                        <>
+                          <Video className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{language === "vi" ? "Thêm video" : "Add video"}</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label>{t("catalog.price", language)}</Label>
                   <Input

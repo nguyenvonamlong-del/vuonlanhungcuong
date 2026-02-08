@@ -38,6 +38,7 @@ export const catalogItems = pgTable("catalog_items", {
   descriptionVi: text("description_vi"),
   descriptionEn: text("description_en"),
   imageUrl: text("image_url"),
+  videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"), // ACTIVE, INACTIVE, DISCONTINUED
   createdAt: timestamp("created_at").defaultNow(),
@@ -59,6 +60,7 @@ export const potTypes = pgTable("pot_types", {
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
   imageUrl: text("image_url"),
+  videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -80,6 +82,7 @@ export const decorationTypes = pgTable("decoration_types", {
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
   imageUrl: text("image_url"),
+  videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
   createdAt: timestamp("created_at").defaultNow(),
