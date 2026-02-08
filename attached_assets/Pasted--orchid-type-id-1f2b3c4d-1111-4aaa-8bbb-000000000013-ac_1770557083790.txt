@@ -1,0 +1,65 @@
+[
+  {
+    "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000013",
+    "active": true,
+    "sku": "PHA-PP-HYAN-SL-35",
+    "genus": "Phalaenopsis",
+    "display_name": { "vi": "Tím huyền ánh", "en": "Mystic Purple Phalaenopsis" },
+    "trade_name": "Phalaenopsis Mystic Purple \"Huyền Ánh\" 3.5",
+    "color_code": "PP",
+    "pattern_code": "SL",
+    "size_options": [3.5],
+    "media": {
+      "photos": ["https://cdn.example.com/orchid/pha-pp-hyan-sl-35-1.jpg"],
+      "videos": [],
+      "spin_360": null
+    },
+    "cost_per_stem": { "currency": "VND", "amount": 160000 },
+    "base_price_per_stem": { "currency": "VND", "amount": 160000 },
+    "tags": ["purple", "huyen-anh"],
+    "created_at": "2026-02-08T12:30:00Z",
+    "updated_at": "2026-02-08T12:30:00Z"
+  },
+  {
+    "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000014",
+    "active": true,
+    "sku": "PHA-PK-PTAI-SG-35",
+    "genus": "Phalaenopsis",
+    "display_name": { "vi": "Hồng phát tài 1 ngồng", "en": "Prosperity Pink Phalaenopsis (Single Spike)" },
+    "trade_name": "Phalaenopsis Prosperity Pink Single Spike 3.5",
+    "color_code": "PK",
+    "pattern_code": "SL",
+    "size_options": [3.5],
+    "media": {
+      "photos": ["https://cdn.example.com/orchid/pha-pk-ptai-sg-35-2.jpg"],
+      "videos": [],
+      "spin_360": null
+    },
+    "cost_per_stem": { "currency": "VND", "amount": 160000 },
+    "base_price_per_stem": { "currency": "VND", "amount": 160000 },
+    "tags": ["pink", "phat-tai", "single-spike"],
+    "created_at": "2026-02-08T12:30:00Z",
+    "updated_at": "2026-02-08T12:30:00Z"
+  },
+  {
+    "orchid_type_id": "1f2b3c4d-1111-4aaa-8bbb-000000000015",
+    "active": true,
+    "sku": "PHA-PP-BDIA-SL-35",
+    "genus": "Phalaenopsis",
+    "display_name": { "vi": "Hắc kim cương", "en": "Black Diamond Phalaenopsis" },
+    "trade_name": "Phalaenopsis \"Black Diamond\" Premium 3.5",
+    "color_code": "PP",
+    "pattern_code": "SL",
+    "size_options": [3.5],
+    "media": {
+      "photos": ["https://cdn.example.com/orchid/pha-pp-bdia-sl-35-1.jpg"],
+      "videos": [],
+      "spin_360": null
+    },
+    "cost_per_stem": { "currency": "VND", "amount": 200000 },
+    "base_price_per_stem": { "currency": "VND", "amount": 200000 },
+    "tags": ["black", "kim-cuong", "premium"],
+    "created_at": "2026-02-08T12:30:00Z",
+    "updated_at": "2026-02-08T12:30:00Z"
+  }
+]
