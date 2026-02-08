@@ -4,11 +4,14 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
-- **2026-02-08**: Performance Optimizations for Concurrent Users:
-  - **Database pool**: Increased connection pool to 20 max connections with idle/connection timeouts
-  - **In-memory caching**: Added server-side cache for catalog, pot types, decoration types, shop pots, settings, shipping types, dashboard stats with automatic invalidation on mutations
-  - **Response compression**: Added gzip/deflate compression middleware to reduce API payload sizes
+- **2026-02-08**: Scaling for 1000+ Concurrent Users:
+  - **Database indexes**: 39 indexes added across all tables for status filters, foreign keys, timestamps, phone/email lookups
+  - **Redis-backed cache**: Dual-layer cache (in-memory + Upstash Redis) with graceful fallback if Redis unavailable
+  - **Rate limiting**: Three tiers - API (200/min), auth (20/15min), orders (10/min) per IP
+  - **Database pool**: 20 max connections with idle/connection timeouts
+  - **Response compression**: gzip/deflate compression middleware (~62% payload reduction)
   - Cache layer: `server/cache.ts` with configurable TTLs (SHORT=30s, MEDIUM=120s, LONG=300s)
+  - Required secrets: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (optional, falls back to in-memory)
 
 - **2026-02-08**: Landing Page & Admin Enhancements:
   - **Product Showcase on Landing**: Horizontal scrollable carousel of premade products with media thumbnails (video priority) displayed right below hero CTA buttons

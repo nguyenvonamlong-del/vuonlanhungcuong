@@ -35,17 +35,18 @@ const authLimiter = rateLimit({
   message: { error: "Too many login attempts, please try again later." },
 });
 
-const orderLimiter = rateLimit({
+const orderCreateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many orders, please try again later." },
+  skip: (req) => req.method !== "POST",
 });
 
 app.use("/api", apiLimiter);
 app.use("/api/auth/login", authLimiter);
-app.use("/api/orders", orderLimiter);
+app.use("/api/orders", orderCreateLimiter);
 
 app.use(
   express.json({

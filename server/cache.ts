@@ -56,13 +56,18 @@ class RedisBackedCache implements ICacheAdapter {
   private redis: Redis;
   private prefix = "orchid:";
 
+  private connected = false;
+
   constructor(redis: Redis) {
     this.redis = redis;
-    this.warmUpFromRedis();
+    this.initRedis();
   }
 
-  private async warmUpFromRedis(): Promise<void> {
+  private async initRedis(): Promise<void> {
     try {
+      await this.redis.ping();
+      this.connected = true;
+      console.log("[cache] Redis connection verified");
       const allKeys = Object.values(CACHE_KEYS);
       for (const key of allKeys) {
         const data = await this.redis.get<string>(this.prefix + key);
@@ -73,7 +78,8 @@ class RedisBackedCache implements ICacheAdapter {
       }
       console.log("[cache] Warmed up from Redis successfully");
     } catch (err) {
-      console.warn("[cache] Redis warm-up failed, starting cold:", (err as Error).message);
+      this.connected = false;
+      console.warn("[cache] Redis connection failed, using in-memory only:", (err as Error).message);
     }
   }
 
@@ -81,46 +87,74 @@ class RedisBackedCache implements ICacheAdapter {
     const memResult = this.memory.get<T>(key);
     if (memResult !== null) return memResult;
 
-    this.redis.get<string>(this.prefix + key).then((data) => {
-      if (data) {
-        const parsed = typeof data === "string" ? JSON.parse(data) : data;
-        this.memory.set(key, parsed, CACHE_TTL.MEDIUM);
-      }
-    }).catch(() => {});
+    if (this.connected) {
+      this.redis.get<string>(this.prefix + key).then((data) => {
+        if (data) {
+          const parsed = typeof data === "string" ? JSON.parse(data) : data;
+          this.memory.set(key, parsed, CACHE_TTL.MEDIUM);
+        }
+      }).catch(() => {});
+    }
 
     return null;
   }
 
   set<T>(key: string, data: T, ttlSeconds: number): void {
     this.memory.set(key, data, ttlSeconds);
-    this.redis.set(this.prefix + key, JSON.stringify(data), { ex: ttlSeconds }).catch((err) => {
-      console.warn("[cache] Redis set failed:", (err as Error).message);
-    });
+    if (this.connected) {
+      this.redis.set(this.prefix + key, JSON.stringify(data), { ex: ttlSeconds }).catch((err) => {
+        console.warn("[cache] Redis set failed:", (err as Error).message);
+      });
+    }
   }
 
   invalidate(key: string): void {
     this.memory.invalidate(key);
-    this.redis.del(this.prefix + key).catch(() => {});
+    if (this.connected) {
+      this.redis.del(this.prefix + key).catch(() => {});
+    }
   }
 
   invalidatePattern(pattern: string): void {
     this.memory.invalidatePattern(pattern);
-    this.redis.keys(this.prefix + pattern + "*").then((keys) => {
-      if (keys.length > 0) {
-        this.redis.del(...keys).catch(() => {});
-      }
-    }).catch(() => {});
+    if (this.connected) {
+      this.redis.keys(this.prefix + pattern + "*").then((keys) => {
+        if (keys.length > 0) {
+          this.redis.del(...keys).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   }
 
   clear(): void {
     this.memory.clear();
-    this.redis.keys(this.prefix + "*").then((keys) => {
-      if (keys.length > 0) {
-        this.redis.del(...keys).catch(() => {});
-      }
-    }).catch(() => {});
+    if (this.connected) {
+      this.redis.keys(this.prefix + "*").then((keys) => {
+        if (keys.length > 0) {
+          this.redis.del(...keys).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   }
 }
+
+export const CACHE_KEYS = {
+  CATALOG_ITEMS: "catalog_items",
+  POT_TYPES: "pot_types",
+  DECORATION_TYPES: "decoration_types",
+  ACTIVE_POTS: "active_pots",
+  ALL_POTS: "all_pots",
+  SETTINGS: "settings",
+  SHIPPING_TYPES: "shipping_types",
+  PAYMENT_TYPES: "payment_types",
+  DASHBOARD_STATS: "dashboard_stats",
+} as const;
+
+export const CACHE_TTL = {
+  SHORT: 30,
+  MEDIUM: 120,
+  LONG: 300,
+} as const;
 
 function createCache(): ICacheAdapter {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -141,21 +175,3 @@ function createCache(): ICacheAdapter {
 }
 
 export const cache = createCache();
-
-export const CACHE_KEYS = {
-  CATALOG_ITEMS: "catalog_items",
-  POT_TYPES: "pot_types",
-  DECORATION_TYPES: "decoration_types",
-  ACTIVE_POTS: "active_pots",
-  ALL_POTS: "all_pots",
-  SETTINGS: "settings",
-  SHIPPING_TYPES: "shipping_types",
-  PAYMENT_TYPES: "payment_types",
-  DASHBOARD_STATS: "dashboard_stats",
-} as const;
-
-export const CACHE_TTL = {
-  SHORT: 30,
-  MEDIUM: 120,
-  LONG: 300,
-} as const;
