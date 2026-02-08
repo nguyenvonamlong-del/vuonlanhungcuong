@@ -991,17 +991,39 @@ export default function CheckoutPage() {
                     </div>
                   ))
                 ) : (
-                  pots.map((pot) => (
-                    <div key={pot.id} className="space-y-2">
-                      <p className="font-medium">{pot.name}</p>
-                      {pot.orchids.map((orchid) => (
-                        <div key={orchid.catalogId} className="flex justify-between text-sm pl-4">
-                          <span>{orchid.speciesName} ({orchid.color}) x{orchid.quantity}</span>
-                          <span>{formatCurrency(orchid.quantity * orchid.pricePerUnit, language)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))
+                  pots.map((pot) => {
+                    const potType = pot.potTypeId ? potTypes.find(pt => pt.id === pot.potTypeId) : null;
+                    const decorationType = pot.decorationTypeId ? decorationTypes.find(dt => dt.id === pot.decorationTypeId) : null;
+                    const potTypePrice = potType ? parseFloat(potType.price as string) : 0;
+                    const decorationPrice = decorationType ? parseFloat(decorationType.price as string) : 0;
+                    return (
+                      <div key={pot.id} className="space-y-2">
+                        <p className="font-medium">{pot.name}</p>
+                        {potType && (
+                          <div className="flex justify-between text-sm pl-4">
+                            <span className="text-muted-foreground">
+                              {language === "vi" ? "Loại chậu" : "Pot Type"}: {language === "vi" ? potType.nameVi : potType.nameEn}
+                            </span>
+                            <span>{formatCurrency(potTypePrice, language)}</span>
+                          </div>
+                        )}
+                        {decorationType && (
+                          <div className="flex justify-between text-sm pl-4">
+                            <span className="text-muted-foreground">
+                              {language === "vi" ? "Trang trí" : "Decoration"}: {language === "vi" ? decorationType.nameVi : decorationType.nameEn}
+                            </span>
+                            <span>{formatCurrency(decorationPrice, language)}</span>
+                          </div>
+                        )}
+                        {pot.orchids.map((orchid) => (
+                          <div key={orchid.catalogId} className="flex justify-between text-sm pl-4">
+                            <span>{orchid.speciesName} ({orchid.color}) x{orchid.quantity}</span>
+                            <span>{formatCurrency(orchid.quantity * orchid.pricePerUnit, language)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })
                 )}
                 <Separator />
                 <div className="space-y-2">

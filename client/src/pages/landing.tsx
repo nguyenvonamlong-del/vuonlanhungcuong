@@ -148,13 +148,21 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-orchid-200 to-orchid-100 dark:from-orchid-800/30 dark:to-orchid-700/20 flex items-center justify-center overflow-hidden">
-                <div className="relative z-10 text-center space-y-4">
-                  <img src="/assets/logo.png" alt="Hùng Cường Orchid Garden" className="w-32 h-32 mx-auto object-contain" />
-                  <p className="font-semibold text-lg">
-                    {language === "vi" ? "Vườn Lan Hùng Cường" : "Orchid Garden"}
-                  </p>
-                </div>
+              <div className="rounded-2xl overflow-hidden">
+                <img
+                  src="/assets/founder.png"
+                  alt={language === "vi" ? "Anh Hùng Cường và vợ - Nhà sáng lập Vườn Lan" : "Mr. Hùng Cường and his spouse - Orchid Garden Founders"}
+                  className="w-full h-auto rounded-2xl object-cover"
+                  data-testid="img-founder"
+                />
+              </div>
+              <div className="mt-4 text-center">
+                <p className="font-semibold text-lg">
+                  {language === "vi" ? "Nhà sáng lập Vườn Lan Hùng Cường" : "Founders of Hùng Cường Orchid Garden"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {language === "vi" ? "Đội 10, Xích Đằng, Lam Sơn, TP. Hưng Yên" : "Doi 10, Xich Dang, Lam Son, Hung Yen City"}
+                </p>
               </div>
             </div>
           </div>

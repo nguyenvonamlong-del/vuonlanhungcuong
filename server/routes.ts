@@ -463,7 +463,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         paymentProofUrl,
         orderType,
         status: "PENDING",
-        depositPaid: false,
+        depositPaid: !!paymentProofUrl,
         remainingPaid: false,
       });
       
