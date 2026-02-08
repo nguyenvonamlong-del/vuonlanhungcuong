@@ -390,6 +390,24 @@ export default function ShopPage() {
     return language === "vi" ? dec.nameVi : dec.nameEn;
   };
 
+  const getOrchidPrice = (catalogItemId: string | undefined): string | null => {
+    if (!catalogItemId) return null;
+    const item = catalogItems.find(c => c.id === catalogItemId);
+    return item ? String(item.pricePerUnit) : null;
+  };
+
+  const getPotTypePrice = (potTypeId: string | null | undefined): string | null => {
+    if (!potTypeId) return null;
+    const pt = potTypesData.find(p => p.id === potTypeId);
+    return pt ? String(pt.price) : null;
+  };
+
+  const getDecorationPrice = (dec: PremadeDecorationItem): string | null => {
+    if (!dec.decorationTypeId) return null;
+    const dt = decorationTypesData.find(d => d.id === dec.decorationTypeId);
+    return dt ? String(dt.price) : null;
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <PublicHeader />
@@ -562,18 +580,20 @@ export default function ShopPage() {
                       </h3>
 
                       {pot.orchidComposition && pot.orchidComposition.length > 0 && (
-                        <div className="space-y-0.5" data-testid={`orchid-composition-${pot.id}`}>
+                        <div className="space-y-1" data-testid={`orchid-composition-${pot.id}`}>
                           <span className="text-xs font-medium text-muted-foreground">
                             {language === "vi" ? "Lan:" : "Orchids:"}
                           </span>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="space-y-0.5">
                             {pot.orchidComposition.map((orchid, idx) => {
                               const resolvedName = getCatalogName(orchid.catalogItemId) ||
                                 (language === "vi" ? orchid.speciesNameVi : orchid.speciesNameEn);
+                              const price = getOrchidPrice(orchid.catalogItemId);
                               return (
-                                <Badge key={idx} variant="outline" className="text-xs" data-testid={`badge-orchid-${pot.id}-${idx}`}>
-                                  {resolvedName} x{orchid.quantity}
-                                </Badge>
+                                <div key={idx} className="flex items-center justify-between gap-1 flex-wrap text-xs" data-testid={`badge-orchid-${pot.id}-${idx}`}>
+                                  <span className="truncate">{resolvedName} <span className="text-muted-foreground">x{orchid.quantity}</span></span>
+                                  {price && <span className="text-muted-foreground shrink-0" data-testid={`price-orchid-${pot.id}-${idx}`}>{formatCurrency(String(Number(price) * orchid.quantity), language)}</span>}
+                                </div>
                               );
                             })}
                           </div>
@@ -581,33 +601,43 @@ export default function ShopPage() {
                       )}
 
                       {getPotTypeName(pot.potTypeId, pot.potTypeName) && (
-                        <div className="flex items-center gap-1.5" data-testid={`pot-type-${pot.id}`}>
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {language === "vi" ? "Chậu:" : "Pot:"}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {getPotTypeName(pot.potTypeId, pot.potTypeName)}
-                          </Badge>
+                        <div className="flex items-center justify-between gap-1 flex-wrap text-xs" data-testid={`pot-type-${pot.id}`}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium text-muted-foreground">
+                              {language === "vi" ? "Chậu:" : "Pot:"}
+                            </span>
+                            <span>{getPotTypeName(pot.potTypeId, pot.potTypeName)}</span>
+                          </div>
+                          {getPotTypePrice(pot.potTypeId) && (
+                            <span className="text-muted-foreground shrink-0" data-testid={`price-pot-type-${pot.id}`}>{formatCurrency(getPotTypePrice(pot.potTypeId)!, language)}</span>
+                          )}
                         </div>
                       )}
 
                       {pot.decorations && pot.decorations.length > 0 && (
-                        <div className="space-y-0.5" data-testid={`decorations-${pot.id}`}>
+                        <div className="space-y-1" data-testid={`decorations-${pot.id}`}>
                           <span className="text-xs font-medium text-muted-foreground">
                             {language === "vi" ? "Trang trí:" : "Decorations:"}
                           </span>
-                          <div className="flex flex-wrap gap-1">
-                            {pot.decorations.map((dec, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs" data-testid={`badge-decoration-${pot.id}-${idx}`}>
-                                {getDecorationName(dec)}
-                              </Badge>
-                            ))}
+                          <div className="space-y-0.5">
+                            {pot.decorations.map((dec, idx) => {
+                              const price = getDecorationPrice(dec);
+                              return (
+                                <div key={idx} className="flex items-center justify-between gap-1 flex-wrap text-xs" data-testid={`badge-decoration-${pot.id}-${idx}`}>
+                                  <span className="truncate">{getDecorationName(dec)}</span>
+                                  {price && <span className="text-muted-foreground shrink-0" data-testid={`price-decoration-${pot.id}-${idx}`}>{formatCurrency(price, language)}</span>}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
 
-                      <div className="text-xl font-bold" data-testid={`text-price-${pot.id}`}>
-                        {formatCurrency(pot.price, language)}
+                      <div className="pt-1 border-t mt-1">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-xs font-medium text-muted-foreground">{language === "vi" ? "Tổng:" : "Total:"}</span>
+                          <span className="text-lg font-bold" data-testid={`text-price-${pot.id}`}>{formatCurrency(pot.price, language)}</span>
+                        </div>
                       </div>
                     </CardContent>
                     <CardFooter className="p-4 pt-0 flex flex-col gap-2 mt-auto">
@@ -669,19 +699,25 @@ export default function ShopPage() {
                     {selectedPot.orchidComposition && selectedPot.orchidComposition.length > 0 && (
                       <div data-testid="detail-orchid-composition">
                         <span className="text-sm font-medium">{language === "vi" ? "Thành phần lan:" : "Orchid Composition:"}</span>
-                        <div className="mt-1.5 space-y-1">
+                        <div className="mt-1.5 space-y-1.5">
                           {selectedPot.orchidComposition.map((orchid, idx) => {
                             const resolvedName = getCatalogName(orchid.catalogItemId) ||
                               (language === "vi" ? orchid.speciesNameVi : orchid.speciesNameEn);
+                            const unitPrice = getOrchidPrice(orchid.catalogItemId);
                             return (
-                              <div key={idx} className="flex items-center justify-between text-sm" data-testid={`detail-orchid-${idx}`}>
-                                <span>{resolvedName}</span>
-                                <div className="flex items-center gap-2">
+                              <div key={idx} className="flex items-center justify-between gap-2 flex-wrap text-sm" data-testid={`detail-orchid-${idx}`}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{resolvedName}</span>
                                   {orchid.color && (
                                     <Badge variant="outline" className="text-xs">{orchid.color}</Badge>
                                   )}
                                   <Badge variant="secondary" className="text-xs">x{orchid.quantity}</Badge>
                                 </div>
+                                {unitPrice && (
+                                  <span className="text-sm text-muted-foreground shrink-0" data-testid={`detail-orchid-price-${idx}`}>
+                                    {formatCurrency(String(Number(unitPrice) * orchid.quantity), language)}
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
@@ -690,21 +726,36 @@ export default function ShopPage() {
                     )}
 
                     {getPotTypeName(selectedPot.potTypeId, selectedPot.potTypeName) && (
-                      <div className="flex items-center gap-2" data-testid="detail-pot-type">
-                        <span className="text-sm font-medium">{language === "vi" ? "Loại chậu:" : "Pot Type:"}</span>
-                        <Badge variant="outline">{getPotTypeName(selectedPot.potTypeId, selectedPot.potTypeName)}</Badge>
+                      <div className="flex items-center justify-between gap-2 flex-wrap" data-testid="detail-pot-type">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{language === "vi" ? "Loại chậu:" : "Pot Type:"}</span>
+                          <span className="text-sm">{getPotTypeName(selectedPot.potTypeId, selectedPot.potTypeName)}</span>
+                        </div>
+                        {getPotTypePrice(selectedPot.potTypeId) && (
+                          <span className="text-sm text-muted-foreground" data-testid="detail-pot-type-price">
+                            {formatCurrency(getPotTypePrice(selectedPot.potTypeId)!, language)}
+                          </span>
+                        )}
                       </div>
                     )}
 
                     {selectedPot.decorations && selectedPot.decorations.length > 0 && (
                       <div data-testid="detail-decorations">
                         <span className="text-sm font-medium">{language === "vi" ? "Trang trí:" : "Decorations:"}</span>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {selectedPot.decorations.map((dec, idx) => (
-                            <Badge key={idx} variant="outline" data-testid={`detail-decoration-${idx}`}>
-                              {getDecorationName(dec)}
-                            </Badge>
-                          ))}
+                        <div className="mt-1.5 space-y-1">
+                          {selectedPot.decorations.map((dec, idx) => {
+                            const price = getDecorationPrice(dec);
+                            return (
+                              <div key={idx} className="flex items-center justify-between gap-2 flex-wrap text-sm" data-testid={`detail-decoration-${idx}`}>
+                                <span>{getDecorationName(dec)}</span>
+                                {price && (
+                                  <span className="text-muted-foreground" data-testid={`detail-decoration-price-${idx}`}>
+                                    {formatCurrency(price, language)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

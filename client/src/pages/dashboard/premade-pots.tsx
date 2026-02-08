@@ -431,26 +431,27 @@ export default function PremadePotsPage() {
                               <StatusBadge status={pot.status} />
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
+                              <div className="flex justify-end gap-2">
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => openEdit(pot)}
                                   data-testid={`button-edit-${pot.id}`}
                                 >
-                                  <Pencil className="h-4 w-4" />
+                                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                  {language === "vi" ? "Sửa" : "Edit"}
                                 </Button>
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive"
+                                  variant="destructive"
+                                  size="sm"
                                   onClick={() => {
                                     setDeletingItem(pot);
                                     setDeleteDialogOpen(true);
                                   }}
                                   data-testid={`button-delete-${pot.id}`}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                  {language === "vi" ? "Xóa" : "Delete"}
                                 </Button>
                               </div>
                             </TableCell>
