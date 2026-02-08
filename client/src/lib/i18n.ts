@@ -37,7 +37,7 @@ export const translations = {
     feature1Title: { vi: 'Chất lượng cao', en: 'Premium Quality' },
     feature1Desc: { vi: 'Lan được chọn lọc kỹ càng từ các vườn uy tín', en: 'Carefully selected orchids from reputable gardens' },
     feature2Title: { vi: 'Giao hàng nhanh', en: 'Fast Delivery' },
-    feature2Desc: { vi: 'Giao hàng toàn quốc trong 2-5 ngày', en: 'Nationwide delivery in 2-5 days' },
+    feature2Desc: { vi: 'Giao hàng từ miền Bắc đến Đà Nẵng', en: 'From north of Vietnam to Đà Nẵng' },
     feature3Title: { vi: 'Đảm bảo tươi', en: 'Fresh Guarantee' },
     feature3Desc: { vi: 'Đổi trả nếu lan không đạt chất lượng', en: 'Return if orchids don\'t meet quality standards' },
     feature4Title: { vi: 'Hỗ trợ 24/7', en: '24/7 Support' },
