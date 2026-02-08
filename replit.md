@@ -4,6 +4,16 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-08**: Pre-made Pots Enhancement:
+  - **Multi-media support**: Each pre-made pot now supports multiple photos AND multiple videos upload via object storage
+  - **Auto-tagging system**: Tags are automatically generated from selected orchid types (orchidComposition), decoration types, and pot type using canonical format (orchid:{id}, decoration:{id}, pot:{id})
+  - **Manual tag editing**: Admin can manually add/remove tags, plus "Regenerate" button to rebuild from current composition
+  - **Orchid composition with quantities**: Admin can add multiple orchid types with individual quantities (+/- controls)
+  - **Tags column in table**: Pre-made pots table shows tag badges with resolved names
+  - **Reference gallery in Create Pot**: When public customers select pot type, decoration, or orchid type during custom pot creation, matching pre-made pots appear as reference gallery with photos/videos and "View & Purchase" link
+  - **On-read tag enrichment**: Existing premade pots without tags get auto-generated tags on API read
+  - Database: Added `videos` (text[]) and `tags` (text[]) columns to premade_pots table
+
 - **2026-02-04**: Notification Services Integration (admin-only):
   - **Notification Channels CRUD**: Full management for notification channels (Email, SMS, Voicemail, Zalo)
     - Add/Edit/Delete channels with bilingual names and descriptions

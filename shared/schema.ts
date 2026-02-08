@@ -231,6 +231,8 @@ export const premadePots = pgTable("premade_pots", {
   price: decimal("price", { precision: 12, scale: 0 }).notNull(),
   stockQuantity: integer("stock_quantity").notNull().default(0),
   images: text("images").array(),
+  videos: text("videos").array(),
+  tags: text("tags").array(),
   // Enhanced orchid composition (JSON with type, quantity per type)
   orchidComposition: jsonb("orchid_composition").$type<PremadeOrchidItem[]>(),
   orchidTypes: text("orchid_types").array(), // Legacy - kept for backward compatibility

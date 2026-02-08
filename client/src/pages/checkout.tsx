@@ -13,6 +13,9 @@ import {
   ShoppingBag,
   Upload,
   ImageIcon,
+  Video,
+  ExternalLink,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +30,7 @@ import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useUpload } from "@/hooks/use-upload";
-import type { CatalogItem, ShippingType, OrderPot, OrderOrchid, PotType, DecorationType } from "@shared/schema";
+import type { CatalogItem, ShippingType, OrderPot, OrderOrchid, PotType, DecorationType, PremadePot } from "@shared/schema";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
@@ -133,6 +136,11 @@ export default function CheckoutPage() {
 
   const { data: decorationTypes = [] } = useQuery<DecorationType[]>({
     queryKey: ["/api/decoration-types"],
+    enabled: !isPremadeMode,
+  });
+
+  const { data: premadePots = [] } = useQuery<PremadePot[]>({
+    queryKey: ["/api/shop/pots"],
     enabled: !isPremadeMode,
   });
 
@@ -526,6 +534,117 @@ export default function CheckoutPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Reference Gallery - Matching Pre-made Pots */}
+                    {(() => {
+                      const selectedTags: string[] = [];
+                      if (pot.potTypeId) selectedTags.push(`pot:${pot.potTypeId}`);
+                      if (pot.decorationTypeId) selectedTags.push(`decoration:${pot.decorationTypeId}`);
+                      pot.orchids.forEach(o => selectedTags.push(`orchid:${o.catalogId}`));
+                      
+                      if (selectedTags.length === 0) return null;
+                      
+                      const matchingPots = premadePots.filter((pp: any) => {
+                        if (!pp.tags || pp.tags.length === 0) return false;
+                        return selectedTags.some((st: string) => pp.tags.includes(st));
+                      });
+                      
+                      if (matchingPots.length === 0) return null;
+                      
+                      return (
+                        <div className="mt-4 space-y-3" data-testid={`reference-gallery-${potIndex}`}>
+                          <Separator />
+                          <div className="flex items-center gap-2">
+                            <Tag className="h-4 w-4 text-primary" />
+                            <Label className="text-sm font-medium text-primary">
+                              {language === "vi" ? "Chậu mẫu tham khảo" : "Reference Pre-made Pots"}
+                            </Label>
+                            <Badge variant="outline" className="text-xs">{matchingPots.length}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {language === "vi" 
+                              ? "Những chậu mẫu sẵn có chứa các loại lan, chậu hoặc trang trí bạn đã chọn"
+                              : "Pre-made pots that contain orchids, pot types or decorations you selected"}
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {matchingPots.map((pp: any) => (
+                              <Card key={pp.id} className="overflow-hidden" data-testid={`reference-pot-${pp.id}`}>
+                                <div className="flex flex-col">
+                                  {/* Media gallery */}
+                                  <div className="flex gap-1 overflow-x-auto p-2 bg-muted/30">
+                                    {(pp.images || []).slice(0, 3).map((img: string, idx: number) => (
+                                      <img
+                                        key={`img-${idx}`}
+                                        src={img}
+                                        alt=""
+                                        className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+                                      />
+                                    ))}
+                                    {(pp.videos || []).slice(0, 2).map((vid: string, idx: number) => (
+                                      <div key={`vid-${idx}`} className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 bg-black">
+                                        <video
+                                          src={vid}
+                                          className="w-full h-full object-cover"
+                                          muted
+                                          loop
+                                          onMouseOver={(e) => (e.target as HTMLVideoElement).play()}
+                                          onMouseOut={(e) => { (e.target as HTMLVideoElement).pause(); (e.target as HTMLVideoElement).currentTime = 0; }}
+                                        />
+                                        <div className="absolute bottom-0.5 right-0.5">
+                                          <Video className="h-3 w-3 text-white" />
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {(!pp.images || pp.images.length === 0) && (!pp.videos || pp.videos.length === 0) && (
+                                      <div className="w-16 h-16 rounded-md bg-muted flex items-center justify-center">
+                                        <Flower2 className="h-6 w-6 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="p-3 space-y-1">
+                                    <p className="font-medium text-sm">{language === "vi" ? pp.nameVi : pp.nameEn}</p>
+                                    <p className="text-sm font-semibold text-primary">{formatCurrency(pp.price, language)}</p>
+                                    {pp.tags && pp.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {pp.tags.filter((tag: string) => selectedTags.includes(tag)).map((tag: string, i: number) => {
+                                          const [type, id] = tag.split(":");
+                                          let label = tag;
+                                          if (type === "orchid") {
+                                            const item = catalogItems.find(c => c.id === id);
+                                            if (item) label = language === "vi" ? item.speciesNameVi : item.speciesNameEn;
+                                          } else if (type === "decoration") {
+                                            const item = decorationTypes.find(d => d.id === id);
+                                            if (item) label = language === "vi" ? item.nameVi : item.nameEn;
+                                          } else if (type === "pot") {
+                                            const item = potTypes.find(p => p.id === id);
+                                            if (item) label = language === "vi" ? item.nameVi : item.nameEn;
+                                          }
+                                          return (
+                                            <Badge key={i} variant="secondary" className="text-xs">
+                                              {label}
+                                            </Badge>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full mt-2"
+                                      onClick={() => navigate("/shop")}
+                                      data-testid={`button-view-pot-${pp.id}`}
+                                    >
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      {language === "vi" ? "Xem & Mua ngay" : "View & Purchase"}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               );

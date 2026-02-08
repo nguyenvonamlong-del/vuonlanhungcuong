@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle, Package, Palette, X, Upload, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle, Package, Palette, X, Upload, Loader2, Video, Tag, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ import { useUpload } from "@/hooks/use-upload";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { PremadePot, InsertPremadePot, PotType, DecorationType, CatalogItem } from "@shared/schema";
 
-const initialFormData: Partial<InsertPremadePot> = {
+const initialFormData: Partial<InsertPremadePot> & { videos?: string[]; tags?: string[] } = {
   nameVi: "",
   nameEn: "",
   descriptionVi: "",
@@ -33,6 +33,8 @@ const initialFormData: Partial<InsertPremadePot> = {
   price: "0",
   stockQuantity: 0,
   images: [],
+  videos: [],
+  tags: [],
   orchidTypes: [],
   potSize: "MEDIUM",
   heightCm: undefined,
@@ -90,6 +92,86 @@ export default function PremadePotsPage() {
       ...prev,
       images: (prev.images || []).filter((_, i) => i !== index)
     }));
+  };
+
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingVideo(true);
+    try {
+      const result = await uploadFile(file);
+      if (result?.objectPath) {
+        setFormData(prev => ({
+          ...prev,
+          videos: [...(prev.videos || []), result.objectPath]
+        }));
+      }
+    } finally {
+      setIsUploadingVideo(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const removeVideo = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      videos: (prev.videos || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const [manualTag, setManualTag] = useState("");
+
+  const regenerateTags = () => {
+    const tags: string[] = [];
+    if (formData.orchidComposition && Array.isArray(formData.orchidComposition)) {
+      for (const item of formData.orchidComposition as any[]) {
+        if (item.catalogItemId) {
+          const tag = `orchid:${item.catalogItemId}`;
+          if (!tags.includes(tag)) tags.push(tag);
+        }
+      }
+    }
+    if (formData.decorations && Array.isArray(formData.decorations)) {
+      for (const item of formData.decorations as any[]) {
+        if (item.decorationTypeId) {
+          const tag = `decoration:${item.decorationTypeId}`;
+          if (!tags.includes(tag)) tags.push(tag);
+        }
+      }
+    }
+    if (formData.potTypeId) {
+      tags.push(`pot:${formData.potTypeId}`);
+    }
+    setFormData(prev => ({ ...prev, tags }));
+  };
+
+  const getTagLabel = (tag: string): string => {
+    const [type, id] = tag.split(":");
+    if (type === "orchid") {
+      const item = catalogItems.find(c => c.id === id);
+      if (item) return `${language === "vi" ? item.speciesNameVi : item.speciesNameEn}`;
+      return tag;
+    }
+    if (type === "decoration") {
+      const item = decorationTypes.find(d => d.id === id);
+      if (item) return `${language === "vi" ? item.nameVi : item.nameEn}`;
+      return tag;
+    }
+    if (type === "pot") {
+      const item = potTypes.find(p => p.id === id);
+      if (item) return `${language === "vi" ? item.nameVi : item.nameEn}`;
+      return tag;
+    }
+    return tag;
+  };
+
+  const getTagIcon = (tag: string) => {
+    const type = tag.split(":")[0];
+    if (type === "orchid") return <Flower2 className="h-3 w-3" />;
+    if (type === "decoration") return <Palette className="h-3 w-3" />;
+    if (type === "pot") return <Package className="h-3 w-3" />;
+    return <Tag className="h-3 w-3" />;
   };
 
   const createMutation = useMutation({
@@ -165,7 +247,13 @@ export default function PremadePotsPage() {
       price: String(pot.price),
       stockQuantity: pot.stockQuantity,
       images: pot.images || [],
+      videos: (pot as any).videos || [],
+      tags: (pot as any).tags || [],
       orchidTypes: pot.orchidTypes || [],
+      orchidComposition: pot.orchidComposition || [],
+      decorations: pot.decorations || [],
+      potTypeId: pot.potTypeId || undefined,
+      potTypeName: pot.potTypeName || undefined,
       potSize: pot.potSize,
       heightCm: pot.heightCm || undefined,
       difficultyLevel: pot.difficultyLevel,
@@ -254,6 +342,7 @@ export default function PremadePotsPage() {
                           <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
                           <TableHead>{language === "vi" ? "Loại chậu" : "Pot Type"}</TableHead>
                           <TableHead>{language === "vi" ? "Trang trí" : "Decoration"}</TableHead>
+                          <TableHead>{language === "vi" ? "Nhãn" : "Tags"}</TableHead>
                           <TableHead>{t("shop.size", language)}</TableHead>
                           <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
                           <TableHead className="text-right">{t("catalog.stock", language)}</TableHead>
@@ -301,6 +390,23 @@ export default function PremadePotsPage() {
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {(pot as any).tags && (pot as any).tags.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                  {(pot as any).tags.slice(0, 3).map((tag: string, i: number) => (
+                                    <Badge key={i} variant="outline" className="text-xs">
+                                      {getTagIcon(tag)}
+                                      <span className="ml-1">{getTagLabel(tag)}</span>
+                                    </Badge>
+                                  ))}
+                                  {(pot as any).tags.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">+{(pot as any).tags.length - 3}</Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -629,11 +735,18 @@ export default function PremadePotsPage() {
               <Select
                 onValueChange={(value) => {
                   const item = catalogItems.find(i => i.id === value);
-                  if (item && !(formData.orchidTypes || []).includes(language === "vi" ? item.speciesNameVi : item.speciesNameEn)) {
-                    setFormData(prev => ({
-                      ...prev,
-                      orchidTypes: [...(prev.orchidTypes || []), language === "vi" ? item.speciesNameVi : item.speciesNameEn]
-                    }));
+                  if (item) {
+                    const existsInComposition = (formData.orchidComposition || []).some((o: any) => o.catalogItemId === item.id);
+                    if (!existsInComposition) {
+                      setFormData(prev => ({
+                        ...prev,
+                        orchidComposition: [
+                          ...(prev.orchidComposition || [] as any[]),
+                          { catalogItemId: item.id, speciesName: language === "vi" ? item.speciesNameVi : item.speciesNameEn, quantity: 1 }
+                        ],
+                        orchidTypes: [...(prev.orchidTypes || []), language === "vi" ? item.speciesNameVi : item.speciesNameEn]
+                      }));
+                    }
                   }
                 }}
               >
@@ -649,24 +762,170 @@ export default function PremadePotsPage() {
                 </SelectContent>
               </Select>
               <div className="flex flex-wrap gap-1 mt-2">
-                {(formData.orchidTypes || []).map((type, i) => (
-                  <Badge key={i} variant="secondary" className="gap-1">
-                    {type}
+                {(formData.orchidComposition || []).map((comp: any, i: number) => {
+                  const item = catalogItems.find(c => c.id === comp.catalogItemId);
+                  const name = item ? (language === "vi" ? item.speciesNameVi : item.speciesNameEn) : comp.speciesName;
+                  return (
+                    <Badge key={i} variant="secondary" className="gap-1">
+                      <Flower2 className="h-3 w-3" />
+                      {name}
+                      <span className="text-xs text-muted-foreground">x{comp.quantity}</span>
+                      <div className="flex items-center gap-0.5 ml-1">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            orchidComposition: (prev.orchidComposition || []).map((o: any, idx: number) =>
+                              idx === i ? { ...o, quantity: Math.max(1, o.quantity - 1) } : o
+                            )
+                          }))}
+                          className="text-xs"
+                        >-</button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            orchidComposition: (prev.orchidComposition || []).map((o: any, idx: number) =>
+                              idx === i ? { ...o, quantity: o.quantity + 1 } : o
+                            )
+                          }))}
+                          className="text-xs"
+                        >+</button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          orchidComposition: (prev.orchidComposition || []).filter((_: any, idx: number) => idx !== i),
+                          orchidTypes: (prev.orchidTypes || []).filter((_, idx) => idx !== i)
+                        }))}
+                        className="ml-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+                {(!formData.orchidComposition || formData.orchidComposition.length === 0) && (
+                  <span className="text-sm text-muted-foreground">{language === "vi" ? "Chưa có loại lan" : "No orchid types specified"}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Videos Upload Section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                {language === "vi" ? "Video sản phẩm" : "Product Videos"}
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {(formData.videos || []).map((vid, index) => (
+                  <div key={index} className="relative w-32 h-20 rounded-md overflow-hidden border bg-muted">
+                    <video src={vid} className="w-full h-full object-cover" muted />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <Video className="h-5 w-5 text-white" />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-5 w-5"
+                      onClick={() => removeVideo(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <label className="w-32 h-20 rounded-md border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover-elevate gap-1">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={handleVideoUpload}
+                    disabled={isUploadingVideo}
+                    data-testid="input-video-upload"
+                  />
+                  {isUploadingVideo ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <Video className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{language === "vi" ? "Thêm video" : "Add video"}</span>
+                    </>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* Tags Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  {language === "vi" ? "Nhãn (Tags)" : "Tags"}
+                </Label>
+                <Button type="button" variant="outline" size="sm" onClick={regenerateTags} data-testid="button-regenerate-tags">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  {language === "vi" ? "Tạo lại" : "Regenerate"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(formData.tags || []).map((tag, i) => (
+                  <Badge key={i} variant="outline" className="flex items-center gap-1" data-testid={`badge-tag-${i}`}>
+                    {getTagIcon(tag)}
+                    <span className="text-xs">{getTagLabel(tag)}</span>
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({
                         ...prev,
-                        orchidTypes: (prev.orchidTypes || []).filter((_, idx) => idx !== i)
+                        tags: (prev.tags || []).filter((_, idx) => idx !== i)
                       }))}
-                      className="ml-1 hover:text-destructive"
+                      className="ml-1"
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 ))}
-                {(!formData.orchidTypes || formData.orchidTypes.length === 0) && (
-                  <span className="text-sm text-muted-foreground">{language === "vi" ? "Chưa có loại lan" : "No orchid types specified"}</span>
+                {(!formData.tags || formData.tags.length === 0) && (
+                  <span className="text-sm text-muted-foreground">
+                    {language === "vi" ? "Chưa có nhãn. Chọn loại lan, chậu, trang trí rồi bấm \"Tạo lại\"" : "No tags. Select orchids, pot, decorations then click \"Regenerate\""}
+                  </span>
                 )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={language === "vi" ? "Thêm nhãn thủ công..." : "Add manual tag..."}
+                  value={manualTag}
+                  onChange={(e) => setManualTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && manualTag.trim()) {
+                      e.preventDefault();
+                      setFormData(prev => ({
+                        ...prev,
+                        tags: [...(prev.tags || []), manualTag.trim()]
+                      }));
+                      setManualTag("");
+                    }
+                  }}
+                  data-testid="input-manual-tag"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (manualTag.trim()) {
+                      setFormData(prev => ({
+                        ...prev,
+                        tags: [...(prev.tags || []), manualTag.trim()]
+                      }));
+                      setManualTag("");
+                    }
+                  }}
+                  data-testid="button-add-tag"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
             </div>
 

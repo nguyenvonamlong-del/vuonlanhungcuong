@@ -10,6 +10,30 @@ import { randomUUID } from "crypto";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { getOrCreateConversation, getChatMessages, streamChatResponse, getConversationById } from "./chatbot";
 
+function generatePremadePotTags(data: any): string[] {
+  const tags: string[] = [];
+  if (data.orchidComposition && Array.isArray(data.orchidComposition)) {
+    for (const item of data.orchidComposition) {
+      if (item.catalogItemId) {
+        const tag = `orchid:${item.catalogItemId}`;
+        if (!tags.includes(tag)) tags.push(tag);
+      }
+    }
+  }
+  if (data.decorations && Array.isArray(data.decorations)) {
+    for (const item of data.decorations) {
+      if (item.decorationTypeId) {
+        const tag = `decoration:${item.decorationTypeId}`;
+        if (!tags.includes(tag)) tags.push(tag);
+      }
+    }
+  }
+  if (data.potTypeId) {
+    tags.push(`pot:${data.potTypeId}`);
+  }
+  return tags;
+}
+
 // Schema for public order creation with required payment proof
 // Matches actual frontend data structure for both premade and custom composition orders
 const publicOrderSchema = z.object({
@@ -195,7 +219,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/premade-pots", async (req, res) => {
     try {
       const pots = await storage.getPremadePots();
-      res.json(pots);
+      const enriched = pots.map((pot: any) => {
+        if (!pot.tags || pot.tags.length === 0) {
+          pot.tags = generatePremadePotTags(pot);
+        }
+        return pot;
+      });
+      res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pots" });
     }
@@ -204,7 +234,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/shop/pots", async (req, res) => {
     try {
       const pots = await storage.getActivePremadePots();
-      res.json(pots);
+      const enriched = pots.map((pot: any) => {
+        if (!pot.tags || pot.tags.length === 0) {
+          pot.tags = generatePremadePotTags(pot);
+        }
+        return pot;
+      });
+      res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pots" });
     }
@@ -213,6 +249,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/premade-pots", async (req, res) => {
     try {
       const data = insertPremadePotSchema.parse(req.body);
+      if (!data.tags || data.tags.length === 0) {
+        data.tags = generatePremadePotTags(data);
+      }
       const pot = await storage.createPremadePot(data);
       res.status(201).json(pot);
     } catch (error: any) {
@@ -222,7 +261,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/premade-pots/:id", async (req, res) => {
     try {
-      const pot = await storage.updatePremadePot(req.params.id, req.body);
+      const body = req.body;
+      if (body.orchidComposition || body.decorations || body.potTypeId || body.orchidTypes) {
+        body.tags = generatePremadePotTags(body);
+      }
+      const pot = await storage.updatePremadePot(req.params.id, body);
       if (!pot) {
         return res.status(404).json({ error: "Pot not found" });
       }
