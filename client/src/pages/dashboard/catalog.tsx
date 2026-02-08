@@ -149,7 +149,7 @@ export default function CatalogPage() {
   });
 
   const { data: shippingTypes = [], isLoading: loadingShipping } = useQuery<ShippingType[]>({
-    queryKey: ["/api/shipping"],
+    queryKey: ["/api/shipping-types"],
   });
 
   const { data: paymentTypes = [], isLoading: loadingPayments } = useQuery<PaymentType[]>({
@@ -217,7 +217,7 @@ export default function CatalogPage() {
     switch (type) {
       case "pot": return "/api/pot-types";
       case "decoration": return "/api/decoration-types";
-      case "shipping": return "/api/shipping";
+      case "shipping": return "/api/shipping-types";
       case "payment": return "/api/payment-types";
       case "priority": return "/api/priority-types";
       default: return "";
