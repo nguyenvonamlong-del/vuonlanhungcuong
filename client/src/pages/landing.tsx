@@ -122,25 +122,25 @@ export default function LandingPage() {
               </p>
               <div className="grid grid-cols-2 gap-6 pt-4">
                 <div className="space-y-1">
-                  <div className="text-3xl font-bold text-primary">10+</div>
+                  <div className="text-3xl font-bold text-primary">20+</div>
                   <div className="text-sm text-muted-foreground">
                     {language === "vi" ? "Năm kinh nghiệm" : "Years Experience"}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-3xl font-bold text-primary">5000+</div>
+                  <div className="text-3xl font-bold text-primary">100K+</div>
                   <div className="text-sm text-muted-foreground">
                     {language === "vi" ? "Đơn hàng thành công" : "Successful Orders"}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-3xl font-bold text-primary">50+</div>
+                  <div className="text-3xl font-bold text-primary">20+</div>
                   <div className="text-sm text-muted-foreground">
                     {language === "vi" ? "Loại lan cao cấp" : "Premium Varieties"}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-3xl font-bold text-primary">98%</div>
+                  <div className="text-3xl font-bold text-primary">100%</div>
                   <div className="text-sm text-muted-foreground">
                     {language === "vi" ? "Khách hàng hài lòng" : "Customer Satisfaction"}
                   </div>
