@@ -85,7 +85,6 @@ function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
               className="w-full h-full object-cover"
               muted
               playsInline
-              loop
               preload="metadata"
               data-testid={`showcase-video-${pot.id}`}
               onEnded={() => setIsPlaying(false)}
@@ -223,55 +222,55 @@ export default function LandingPage() {
       <PublicHeader />
 
       <section className="bg-gradient-to-b from-orchid-50 to-background dark:from-orchid-900/10 dark:to-background" data-testid="section-center-actions">
-        <div className="container mx-auto px-4 pt-6 pb-4 md:pt-8 md:pb-6">
-          <div className="text-center mb-4 md:mb-5">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+        <div className="container mx-auto px-4 pt-4 pb-4 md:pt-6 md:pb-6">
+          <div className="text-center mb-3 md:hidden">
+            <h1 className="text-2xl font-bold tracking-tight">
               {t("landing.heroTitle", language)}
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {t("landing.heroSubtitle", language)}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto mb-5 md:mb-6">
+          <div className="grid grid-cols-2 gap-3 md:gap-5 max-w-lg md:max-w-xl mx-auto mb-5 md:mb-6">
             <Link href="/shop">
               <Card className="hover-elevate group h-full">
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-3">
+                  <div className="w-10 h-10 md:w-16 md:h-16 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <ShoppingCart className="h-5 w-5 md:h-7 md:w-7 text-primary" />
                   </div>
-                  <h3 className="font-bold text-sm md:text-base">
+                  <h3 className="font-bold text-sm md:text-lg">
                     {language === "vi" ? "Chậu Lan Có Sẵn" : "Premade Products"}
                   </h3>
-                  <p className="text-xs text-muted-foreground hidden sm:block">
+                  <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
                     {language === "vi"
                       ? "Bộ sưu tập lan hồ điệp trang trí sẵn"
                       : "Ready-made orchid arrangements"}
                   </p>
-                  <Button size="sm" className="gap-1.5 mt-auto" data-testid="button-hero-cta">
-                    {language === "vi" ? "Xem sản phẩm" : "Browse"}
-                    <ArrowRight className="h-3.5 w-3.5" />
+                  <Button className="gap-2 mt-auto" data-testid="button-hero-cta">
+                    {language === "vi" ? "Xem sản phẩm" : "Browse Products"}
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </CardContent>
               </Card>
             </Link>
             <Link href="/checkout">
               <Card className="hover-elevate group h-full">
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <Palette className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-3">
+                  <div className="w-10 h-10 md:w-16 md:h-16 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <Palette className="h-5 w-5 md:h-7 md:w-7 text-primary" />
                   </div>
-                  <h3 className="font-bold text-sm md:text-base">
+                  <h3 className="font-bold text-sm md:text-lg">
                     {language === "vi" ? "Đặt Chậu Riêng" : "Custom Order"}
                   </h3>
-                  <p className="text-xs text-muted-foreground hidden sm:block">
+                  <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
                     {language === "vi"
                       ? "Thiết kế chậu lan theo ý thích"
                       : "Design your own arrangement"}
                   </p>
-                  <Button size="sm" variant="outline" className="gap-1.5 mt-auto" data-testid="button-custom-order">
-                    {language === "vi" ? "Bắt đầu" : "Start"}
-                    <ArrowRight className="h-3.5 w-3.5" />
+                  <Button variant="outline" className="gap-2 mt-auto" data-testid="button-custom-order">
+                    {language === "vi" ? "Bắt đầu thiết kế" : "Start Designing"}
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </CardContent>
               </Card>
