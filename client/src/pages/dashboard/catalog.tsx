@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard, Flag, Video, X, Upload, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Flower2, Search, MessageCircle, Package, Palette, Truck, CreditCard, Flag, Video, X, Upload, Loader2, Tag } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { useUpload } from "@/hooks/use-upload";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { StaffSidebar } from "@/components/staff-sidebar";
@@ -29,14 +30,21 @@ type CatalogTab = "orchid" | "pot" | "decoration" | "shipping" | "payment" | "pr
 const initialOrchidForm: InsertCatalogItem = {
   speciesNameVi: "",
   speciesNameEn: "",
+  sku: "",
+  genus: "Phalaenopsis",
+  tradeName: "",
   color: "",
+  colorCode: "",
+  patternCode: "",
   heightCm: 0,
   pricePerUnit: "0",
+  costPerUnit: "",
   stockQuantity: 0,
   minOrderQuantity: 5,
   descriptionVi: "",
   descriptionEn: "",
   imageUrl: "",
+  tags: [],
   status: "ACTIVE",
 };
 
@@ -311,14 +319,21 @@ export default function CatalogPage() {
     setOrchidForm({
       speciesNameVi: item.speciesNameVi,
       speciesNameEn: item.speciesNameEn,
+      sku: item.sku || "",
+      genus: item.genus || "Phalaenopsis",
+      tradeName: item.tradeName || "",
       color: item.color,
+      colorCode: item.colorCode || "",
+      patternCode: item.patternCode || "",
       heightCm: item.heightCm,
       pricePerUnit: String(item.pricePerUnit),
+      costPerUnit: item.costPerUnit ? String(item.costPerUnit) : "",
       stockQuantity: item.stockQuantity,
       minOrderQuantity: item.minOrderQuantity,
       descriptionVi: item.descriptionVi || "",
       descriptionEn: item.descriptionEn || "",
       imageUrl: item.imageUrl || "",
+      tags: item.tags || [],
       status: item.status,
     });
     setOrchidVideos(item.videos || []);
@@ -544,11 +559,13 @@ export default function CatalogPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">{language === "vi" ? "Ảnh" : "Image"}</TableHead>
+                  <TableHead>SKU</TableHead>
                   <TableHead>{t("catalog.species", language)}</TableHead>
                   <TableHead>{t("catalog.color", language)}</TableHead>
-                  <TableHead className="text-right">{t("catalog.height", language)}</TableHead>
                   <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
+                  <TableHead className="text-right">{language === "vi" ? "Giá vốn" : "Cost"}</TableHead>
                   <TableHead className="text-right">{t("catalog.stock", language)}</TableHead>
+                  <TableHead>{language === "vi" ? "Tags" : "Tags"}</TableHead>
                   <TableHead>{t("catalog.status", language)}</TableHead>
                   <TableHead className="text-right">{t("catalog.actions", language)}</TableHead>
                 </TableRow>
@@ -565,16 +582,32 @@ export default function CatalogPage() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {language === "vi" ? item.speciesNameVi : item.speciesNameEn}
+                    <TableCell className="text-xs text-muted-foreground font-mono">
+                      {item.sku || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{language === "vi" ? item.speciesNameVi : item.speciesNameEn}</div>
+                      {item.genus && <div className="text-xs text-muted-foreground">{item.genus}</div>}
                     </TableCell>
                     <TableCell>{item.color}</TableCell>
-                    <TableCell className="text-right">{item.heightCm} cm</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.pricePerUnit, language)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {item.costPerUnit ? formatCurrency(item.costPerUnit, language) : "—"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <span className={item.stockQuantity < 50 ? "text-destructive font-medium" : ""}>
                         {item.stockQuantity}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[150px]">
+                        {(item.tags || []).slice(0, 3).map((tag, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
+                        {(item.tags || []).length > 3 && (
+                          <Badge variant="outline" className="text-xs">+{(item.tags || []).length - 3}</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={item.status} />
@@ -812,13 +845,13 @@ export default function CatalogPage() {
 
       {/* Orchid Dialog */}
       <Dialog open={orchidDialogOpen} onOpenChange={setOrchidDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editingOrchid ? (language === "vi" ? "Sửa Loại Lan" : "Edit Orchid Type") : (language === "vi" ? "Thêm Loại Lan" : "Add Orchid Type")}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleOrchidSubmit} className="space-y-4">
+          <form onSubmit={handleOrchidSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("catalog.species", language)} (VI)</Label>
@@ -836,6 +869,34 @@ export default function CatalogPage() {
                   onChange={(e) => setOrchidForm({ ...orchidForm, speciesNameEn: e.target.value })}
                   required
                   data-testid="input-speciesNameEn"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>SKU</Label>
+                <Input
+                  value={orchidForm.sku || ""}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, sku: e.target.value })}
+                  placeholder="PHA-PP-HYAN-SL-35"
+                  data-testid="input-sku"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Chi" : "Genus"}</Label>
+                <Input
+                  value={orchidForm.genus || ""}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, genus: e.target.value })}
+                  placeholder="Phalaenopsis"
+                  data-testid="input-genus"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Tên thương mại" : "Trade Name"}</Label>
+                <Input
+                  value={orchidForm.tradeName || ""}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, tradeName: e.target.value })}
+                  data-testid="input-tradeName"
                 />
               </div>
             </div>
@@ -857,6 +918,26 @@ export default function CatalogPage() {
                   onChange={(e) => setOrchidForm({ ...orchidForm, heightCm: parseInt(e.target.value) || 0 })}
                   required
                   data-testid="input-height"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Mã màu" : "Color Code"}</Label>
+                <Input
+                  value={orchidForm.colorCode || ""}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, colorCode: e.target.value })}
+                  placeholder="PP, PK, WH..."
+                  data-testid="input-colorCode"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Mã mẫu" : "Pattern Code"}</Label>
+                <Input
+                  value={orchidForm.patternCode || ""}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, patternCode: e.target.value })}
+                  placeholder="SL, ST..."
+                  data-testid="input-patternCode"
                 />
               </div>
             </div>
@@ -909,7 +990,7 @@ export default function CatalogPage() {
                 </label>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>{t("catalog.price", language)}</Label>
                 <Input
@@ -918,6 +999,15 @@ export default function CatalogPage() {
                   onChange={(e) => setOrchidForm({ ...orchidForm, pricePerUnit: e.target.value })}
                   required
                   data-testid="input-price"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === "vi" ? "Giá vốn" : "Cost"}</Label>
+                <Input
+                  type="number"
+                  value={orchidForm.costPerUnit || ""}
+                  onChange={(e) => setOrchidForm({ ...orchidForm, costPerUnit: e.target.value })}
+                  data-testid="input-cost"
                 />
               </div>
               <div className="space-y-2">
@@ -942,6 +1032,42 @@ export default function CatalogPage() {
                     <SelectItem value="DISCONTINUED">{t("catalog.discontinued", language)}</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Tags
+              </Label>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {(orchidForm.tags || []).map((tag, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs gap-1">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => setOrchidForm({ ...orchidForm, tags: (orchidForm.tags || []).filter((_, idx) => idx !== i) })}
+                      className="ml-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={language === "vi" ? "Nhập tag rồi Enter" : "Type tag and press Enter"}
+                  data-testid="input-tag"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if (val && !(orchidForm.tags || []).includes(val)) {
+                        setOrchidForm({ ...orchidForm, tags: [...(orchidForm.tags || []), val] });
+                        (e.target as HTMLInputElement).value = "";
+                      }
+                    }
+                  }}
+                />
               </div>
             </div>
             <DialogFooter>
