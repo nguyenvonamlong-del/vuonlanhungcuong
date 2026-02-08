@@ -1,0 +1,223 @@
+Below are world-standard, actionable UI/UX recommendations tailored to the exact IA you documented (Public: /shop, /checkout, /tracking; Admin: /dashboard/*) and the fact you have 19 screens captured Feb 8, 2026. 
+
+DOCTYPE html
+
+1) Information architecture that feels “premium”
+A. Make “what to do next” obvious everywhere
+
+Rule: every page must have one dominant primary action (CTA) and at most one secondary action.
+
+Shop (/shop): Primary = “View details” or “Add to cart” (pick one as primary depending on your strategy). Secondary = the other. Don’t make both equal weight. 
+
+DOCTYPE html
+
+Checkout (/checkout): Primary = “Continue” / “Place order”; secondary = “Back”. Never introduce a third CTA in the step footer. 
+
+DOCTYPE html
+
+Admin Orders (/dashboard/orders): Primary = “Update status” or “Assign technician” depending on row state; hide non-essential actions in a kebab menu.
+
+B. Add “Saved Views” for pro workflows (Admin tables)
+
+In every management table (Orders, Inventory, Customers, Technicians, Suppliers, Audit Log), add:
+
+Saved filters (e.g., “Delayed shipments”, “VIP urgent queue”, “Low stock orchids”)
+
+Column visibility + order
+
+Default sort per view
+This is one of the biggest deltas between “amateur” and “prestige” internal tools: operators feel in control.
+
+2) Visual hierarchy: premium = calmer, clearer, fewer competing signals
+
+Your design system is already structured (tokens, typography levels, flat design). The prestige jump comes from stricter hierarchy enforcement:
+
+A. Enforce a “3-line card rule” (public product cards)
+
+On product cards, cap the visible text to:
+
+Product name
+
+One-line composition summary (e.g., “3× Pink 3.5 + Driftwood”)
+
+Total price + delivery estimate line (if available)
+
+Everything else goes into the detail dialog. This prevents “accounting UI” from leaking into shopping UX.
+
+B. Replace “dense cost breakdown” with progressive disclosure
+
+Show:
+
+Total prominently
+
+“Includes: orchids, pot, decor” as a single line
+
+A “View breakdown” accordion inside detail dialog, not on the grid
+
+3) Product discovery on /shop: make it feel like a flagship store
+A. Filters: show impact and reduce uncertainty
+
+Add these behaviors:
+
+Result count updates as filters change (e.g., “24 items”)
+
+Disable impossible filter options (with tooltip “No items match”)
+
+Sticky filter summary bar on scroll: “Pink • 3.5 • Bat Trang (Clear all)”
+
+B. Search that behaves like a premium catalog
+
+Autocomplete with categories: Orchid Types, Pot Styles, Decorations
+
+Typo tolerance (“hồ điệp” vs “ho diep”)
+
+“Did you mean … ?” for common VN input variations (tone marks)
+
+4) Checkout /checkout: remove friction, increase trust (VN payment reality)
+
+Your flow includes multi-step checkout. 
+
+DOCTYPE html
+
+
+To make it world-class:
+
+A. Address UX: VN-specific validation
+
+Province/District/Ward dropdowns should be searchable, with caching and “recent addresses”
+
+Auto-format phone numbers; show carrier icon if detected
+
+Inline “Delivery restrictions” (if any) per province
+
+B. Shipping selection must feel deterministic
+
+For each shipping option card:
+
+Guaranteed date range (e.g., “Arrives Tue–Wed”)
+
+Cutoff time (“Order before 12:00 for same-day dispatch” if applicable)
+
+A “Why this cost?” tooltip (distance, handling, fragility)
+
+C. VietQR / bank transfer: add trust scaffolding
+
+If you show VietQR + proof upload:
+
+Display bank name, account name, last-4, and a copy button for each field
+
+Show a “Payment status timeline” (Submitted proof → Verified → Deposit received)
+
+After upload, show checksum-like confirmation: “We detected transfer amount: ___ (edit if wrong)”
+
+This dramatically reduces support tickets.
+
+5) Order tracking /tracking: premium = proactive + self-serve
+
+The tracking page exists in your IA. 
+
+DOCTYPE html
+
+Add:
+
+A single “tracking token” entry as default; phone/email lookup as secondary
+
+Status timeline with timestamps and “What happens next” copy per status
+
+A “Need help?” panel with context-aware quick actions:
+
+“Change delivery time”
+
+“Update address” (policy-based)
+
+“Report damaged item” (starts a Return/Exception flow)
+
+6) Customer notifications: make it feel premium, not spammy
+
+Create a Notification Center UX spec:
+
+Every order status change must map to:
+
+Customer-facing message
+
+Channel priority (push/email/SMS/voice for urgent)
+
+Quiet hours rules
+
+Retry & fallback logic
+
+Customer can opt into “VIP updates” (more granular) vs “Essential only”
+
+Key prestige detail: messages must answer:
+
+What changed
+
+Why it matters
+
+What you need from the customer (if anything)
+
+Next expected timestamp
+
+7) Technician + queue UX: “ops-grade” controls
+
+To make the assembly workflow feel like a modern fulfillment system:
+
+Add a Queue Board (Kanban + SLA timers) with:
+
+VIP/Urgent pinned lane
+
+“Aging” indicator (time in status)
+
+Blocking reasons (missing pot, missing orchid type, payment pending)
+
+Technician profile page:
+
+Current WIP count
+
+Skill tags (orchid types, complex decor)
+
+Availability forecast (next 2–3 hours / today)
+
+Assignment UI:
+
+“Suggested technician” (based on load + skill + SLA)
+
+One-click assign + immediate toast + audit entry
+
+8) Chatbot ordering: prestige = controlled + transparent
+
+You want guest checkout via chatbot + normal UI. Your doc mentions chatbot modes. 
+
+DOCTYPE html
+
+Make it premium by enforcing:
+
+A side-by-side “Order Draft” panel while chatting (always visible)
+
+“Confirm” gates for money steps:
+
+Shipping choice confirmation
+
+Address confirmation
+
+Deposit amount confirmation
+
+Explicit handoff to human:
+
+“Talk to staff now” with expected response time
+
+Clear privacy statement for guest users (what you store, for how long)
+
+9) i18n (VI/EN): premium = not just translation
+
+To support Vietnamese + English well:
+
+Use locale-aware formatting:
+
+VND formatting, separators, dates, times
+
+Avoid text expansion breakage:
+
+English strings are often longer; define max widths + truncation rules
+
+Maintain translation keys for statuses (customer-facing vs internal ops might differ)

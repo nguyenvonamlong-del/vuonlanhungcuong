@@ -881,10 +881,28 @@ export default function CheckoutPage() {
                     />
                   </div>
                 </div>
-                <div className="text-center text-sm text-muted-foreground">
-                  <p>{language === "vi" ? "Số tiền cọc:" : "Deposit amount:"} <strong>{formatCurrency(deposit, language)}</strong></p>
-                  <p>VIETCOMBANK - 9983270995</p>
-                  <p>LE THI THANH TU</p>
+                <div className="text-left space-y-2 text-sm">
+                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-bank-name-pre">
+                    <span className="text-muted-foreground">{t("payment.bankName", language)}</span>
+                    <span className="font-medium">Vietcombank (VCB)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-account-number-pre">
+                    <span className="text-muted-foreground">{t("payment.accountNumber", language)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-medium">9983270995</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleCopy("9983270995", "acct-pre")} data-testid="button-copy-account-pre">
+                        {copied === "acct-pre" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-account-holder-pre">
+                    <span className="text-muted-foreground">{t("payment.accountHolder", language)}</span>
+                    <span className="font-medium">LE THI THANH TU</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded bg-primary/10" data-testid="text-deposit-amount-pre">
+                    <span className="text-muted-foreground">{language === "vi" ? "Số tiền cọc" : "Deposit amount"}</span>
+                    <span className="font-semibold text-primary">{formatCurrency(deposit, language)}</span>
+                  </div>
                 </div>
                 <Separator />
                 <div className="space-y-3">
@@ -985,7 +1003,7 @@ export default function CheckoutPage() {
                   <span className="text-sm text-muted-foreground">{t("orders.orderNumber", language)}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-semibold">{orderResult.orderNumber}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(orderResult.orderNumber, "order")}>
+                    <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.orderNumber, "order")} data-testid="button-copy-order-number">
                       {copied === "order" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -994,7 +1012,7 @@ export default function CheckoutPage() {
                   <span className="text-sm">{t("checkout.trackingToken", language)}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-semibold">{orderResult.trackingToken}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(orderResult.trackingToken, "tracking")}>
+                    <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.trackingToken, "tracking")} data-testid="button-copy-tracking-token">
                       {copied === "tracking" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -1025,8 +1043,8 @@ export default function CheckoutPage() {
                       <span className="text-muted-foreground">{t("payment.accountNumber", language)}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">1234567890</span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopy("1234567890", "account")}>
-                          {copied === "account" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        <Button variant="ghost" size="icon" onClick={() => handleCopy("1234567890", "account")} data-testid="button-copy-account-post">
+                          {copied === "account" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
@@ -1042,8 +1060,8 @@ export default function CheckoutPage() {
                       <span className="text-muted-foreground">{t("payment.description", language)}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">ORCHID {orderResult.orderNumber}</span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopy(`ORCHID ${orderResult.orderNumber}`, "desc")}>
-                          {copied === "desc" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        <Button variant="ghost" size="icon" onClick={() => handleCopy(`ORCHID ${orderResult.orderNumber}`, "desc")} data-testid="button-copy-desc">
+                          {copied === "desc" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>

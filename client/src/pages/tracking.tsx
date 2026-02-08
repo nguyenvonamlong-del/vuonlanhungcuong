@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Check, Clock, Package, Truck, MapPin, XCircle, Flower2, Phone, Mail } from "lucide-react";
+import { Search, Check, Clock, Package, Truck, MapPin, XCircle, Flower2, Phone, Mail, HelpCircle, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,33 @@ const statusTimeline = [
   { status: "SHIPPING", icon: Truck, labelKey: "status.SHIPPING" },
   { status: "DELIVERED", icon: MapPin, labelKey: "status.DELIVERED" },
 ];
+
+const whatHappensNext: Record<string, { vi: string; en: string }> = {
+  PENDING: {
+    vi: "Chúng tôi đang xác nhận đơn hàng và kiểm tra thanh toán cọc của bạn. Bạn sẽ nhận được xác nhận trong vòng 24 giờ.",
+    en: "We're verifying your order and checking your deposit payment. You'll receive confirmation within 24 hours.",
+  },
+  CONFIRMED: {
+    vi: "Đơn hàng đã được xác nhận! Kỹ thuật viên của chúng tôi sẽ bắt đầu chuẩn bị chậu lan cho bạn.",
+    en: "Your order is confirmed! Our technicians will begin preparing your orchid arrangement.",
+  },
+  PREPARING: {
+    vi: "Kỹ thuật viên đang chăm sóc và sắp xếp chậu lan theo yêu cầu. Thời gian chuẩn bị thường từ 1-3 ngày.",
+    en: "Our technician is carefully arranging your orchid pot. Preparation typically takes 1-3 days.",
+  },
+  READY: {
+    vi: "Chậu lan đã sẵn sàng! Đơn hàng sẽ được giao cho đơn vị vận chuyển trong thời gian sớm nhất.",
+    en: "Your orchid pot is ready! It will be handed to the shipping carrier as soon as possible.",
+  },
+  SHIPPING: {
+    vi: "Đơn hàng đang trên đường giao đến bạn. Vui lòng đảm bảo có người nhận hàng tại địa chỉ.",
+    en: "Your order is on its way! Please ensure someone is available at the delivery address.",
+  },
+  DELIVERED: {
+    vi: "Đơn hàng đã được giao thành công. Cảm ơn bạn đã mua hàng!",
+    en: "Your order has been delivered successfully. Thank you for your purchase!",
+  },
+};
 
 const statusOrder = ["PENDING", "CONFIRMED", "PREPARING", "READY", "SHIPPING", "DELIVERED"];
 
@@ -284,7 +311,7 @@ export default function TrackingPage() {
                                   {t(step.labelKey, language)}
                                 </p>
                                 {isCurrent && (
-                                  <p className="text-sm text-primary">
+                                  <p className="text-sm text-primary" data-testid="text-current-status">
                                     {language === "vi" ? "Trạng thái hiện tại" : "Current status"}
                                   </p>
                                 )}
@@ -296,6 +323,57 @@ export default function TrackingPage() {
                       </div>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {displayOrder.status !== "CANCELLED" && whatHappensNext[displayOrder.status] && (
+                <Card data-testid="card-what-happens-next">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <HelpCircle className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm mb-1" data-testid="text-what-happens-next-title">
+                          {language === "vi" ? "Tiếp theo là gì?" : "What happens next?"}
+                        </p>
+                        <p className="text-sm text-muted-foreground" data-testid="text-what-happens-next-body">
+                          {whatHappensNext[displayOrder.status][language]}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card data-testid="card-need-help">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-1" data-testid="text-need-help-title">
+                        {language === "vi" ? "Cần hỗ trợ?" : "Need help?"}
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-2" data-testid="text-need-help-body">
+                        {language === "vi"
+                          ? "Liên hệ chúng tôi nếu bạn có bất kỳ câu hỏi nào về đơn hàng."
+                          : "Contact us if you have any questions about your order."}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <a href="tel:0983270995" className="inline-flex items-center gap-1.5 text-sm text-primary" data-testid="link-phone-support">
+                          <Phone className="h-3.5 w-3.5" />
+                          0983 270 995
+                        </a>
+                        <span className="text-muted-foreground">|</span>
+                        <a href="mailto:Thanhtusky147@gmail.com" className="inline-flex items-center gap-1.5 text-sm text-primary" data-testid="link-email-support">
+                          <Mail className="h-3.5 w-3.5" />
+                          Email
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
