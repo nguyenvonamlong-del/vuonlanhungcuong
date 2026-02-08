@@ -47,14 +47,14 @@ function MediaGallery({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const allMedia: { type: "image" | "video"; url: string }[] = [];
-  if (images) {
-    for (const url of images) {
-      allMedia.push({ type: "image", url });
-    }
-  }
   if (videos) {
     for (const url of videos) {
       allMedia.push({ type: "video", url });
+    }
+  }
+  if (images) {
+    for (const url of images) {
+      allMedia.push({ type: "image", url });
     }
   }
 
@@ -569,11 +569,22 @@ export default function ShopPage() {
                 {filteredPots.map((pot) => (
                   <Card key={pot.id} className="group flex flex-col" data-testid={`card-product-${pot.id}`}>
                     <div className="relative aspect-[4/3] bg-muted overflow-hidden rounded-t-lg">
-                      {pot.images?.[0] ? (
+                      {pot.videos?.[0] ? (
+                        <video
+                          src={pot.videos[0]}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                          loop
+                          autoPlay
+                          data-testid={`video-thumbnail-${pot.id}`}
+                        />
+                      ) : pot.images?.[0] ? (
                         <img
                           src={pot.images[0]}
                           alt={language === "vi" ? pot.nameVi : pot.nameEn}
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          data-testid={`img-thumbnail-${pot.id}`}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
