@@ -36,6 +36,7 @@ const initialOrchidForm: InsertCatalogItem = {
   color: "",
   colorCode: "",
   patternCode: "",
+  sizeOptions: [],
   heightCm: 0,
   pricePerUnit: "0",
   costPerUnit: "",
@@ -325,6 +326,7 @@ export default function CatalogPage() {
       color: item.color,
       colorCode: item.colorCode || "",
       patternCode: item.patternCode || "",
+      sizeOptions: item.sizeOptions || [],
       heightCm: item.heightCm,
       pricePerUnit: String(item.pricePerUnit),
       costPerUnit: item.costPerUnit ? String(item.costPerUnit) : "",
@@ -940,6 +942,18 @@ export default function CatalogPage() {
                   data-testid="input-patternCode"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{language === "vi" ? "Kích cỡ (inch)" : "Size Options (inches)"}</Label>
+              <Input
+                value={(orchidForm.sizeOptions || []).join(", ")}
+                onChange={(e) => {
+                  const vals = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                  setOrchidForm({ ...orchidForm, sizeOptions: vals });
+                }}
+                placeholder="3.5, 4.0"
+                data-testid="input-sizeOptions"
+              />
             </div>
             <ImageUpload
               value={orchidForm.imageUrl || ""}
