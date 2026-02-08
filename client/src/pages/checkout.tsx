@@ -62,8 +62,8 @@ const steps = [
   { key: "composition", labelKey: "checkout.step1" },
   { key: "info", labelKey: "checkout.step2" },
   { key: "shipping", labelKey: "checkout.step3" },
-  { key: "review", labelKey: "checkout.step4" },
-  { key: "payment", labelKey: "checkout.step5" },
+  { key: "payment", labelKey: "checkout.step4" },
+  { key: "review", labelKey: "checkout.step5" },
 ];
 
 export default function CheckoutPage() {
@@ -162,7 +162,6 @@ export default function CheckoutPage() {
     },
     onSuccess: (data) => {
       setOrderResult(data);
-      setCurrentStep(4);
       if (isPremadeMode) clearCart();
     },
     onError: () => {
@@ -283,7 +282,7 @@ export default function CheckoutPage() {
   };
 
   const handleNext = () => {
-    if (currentStep === 3) {
+    if (currentStep === 4) {
       const orderPots: OrderPot[] = isPremadeMode
         ? cart.map((item, idx) => ({
             potId: item.pot.id,
@@ -783,6 +782,182 @@ export default function CheckoutPage() {
         return (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">{t("checkout.step4", language)}</h2>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === "vi" ? "Thanh toán tiền cọc" : "Pay Deposit"}</CardTitle>
+                <CardDescription>
+                  {language === "vi" 
+                    ? "Quét mã QR hoặc chuyển khoản để thanh toán tiền cọc, sau đó tải ảnh chứng từ thanh toán"
+                    : "Scan QR code or transfer to pay deposit, then upload the payment proof image"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center p-3 rounded-lg bg-primary/10">
+                  <span className="font-medium">{language === "vi" ? "Số tiền cọc" : "Deposit amount"}</span>
+                  <span className="text-xl font-bold text-primary">{formatCurrency(deposit, language)}</span>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-lg">
+                    <img 
+                      src="/assets/vietcombank-qr.png" 
+                      alt="Vietcombank QR Payment" 
+                      className="w-64 h-auto object-contain" 
+                    />
+                  </div>
+                </div>
+
+                <div className="text-left space-y-2 text-sm">
+                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-bank-name-pre">
+                    <span className="text-muted-foreground">{t("payment.bankName", language)}</span>
+                    <span className="font-medium">Vietcombank (VCB)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-account-number-pre">
+                    <span className="text-muted-foreground">{t("payment.accountNumber", language)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-medium">9983270995</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleCopy("9983270995", "acct-pre")} data-testid="button-copy-account-pre">
+                        {copied === "acct-pre" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-account-holder-pre">
+                    <span className="text-muted-foreground">{t("payment.accountHolder", language)}</span>
+                    <span className="font-medium">LE THI THANH TU</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded bg-primary/10" data-testid="text-deposit-amount-pre">
+                    <span className="text-muted-foreground">{language === "vi" ? "Số tiền cọc" : "Deposit amount"}</span>
+                    <span className="font-semibold text-primary">{formatCurrency(deposit, language)}</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label>
+                    {language === "vi" ? "Ảnh chứng từ thanh toán" : "Payment proof image"} *
+                  </Label>
+                  
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    data-testid="input-payment-proof-file"
+                  />
+                  
+                  {!paymentProofUrl ? (
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {language === "vi" 
+                          ? "Tải ảnh chứng từ thanh toán của bạn"
+                          : "Upload your payment proof image"}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        data-testid="button-upload-payment-proof"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {language === "vi" ? `Đang tải... ${progress}%` : `Uploading... ${progress}%`}
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            {language === "vi" ? "Chọn ảnh" : "Select Image"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg p-3">
+                      <div className="relative">
+                        <img 
+                          src={paymentProofUrl} 
+                          alt="Payment proof" 
+                          className="max-w-full h-auto max-h-48 mx-auto object-contain rounded"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => setPaymentProofUrl("")}
+                          data-testid="button-remove-payment-proof"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 mt-2 text-sm text-green-600">
+                        <Check className="h-4 w-4" />
+                        {language === "vi" ? "Đã tải ảnh lên" : "Image uploaded"}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 4:
+        if (orderResult) {
+          return (
+            <div className="space-y-6 text-center">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">{t("checkout.orderSuccess", language)}</h2>
+                <p className="text-muted-foreground">
+                  {language === "vi"
+                    ? "Đơn hàng của bạn đã được đặt thành công"
+                    : "Your order has been placed successfully"}
+                </p>
+              </div>
+
+              <Card>
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                    <span className="text-sm text-muted-foreground">{t("orders.orderNumber", language)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold">{orderResult.orderNumber}</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.orderNumber, "order")} data-testid="button-copy-order-number">
+                        {copied === "order" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
+                    <span className="text-sm">{t("checkout.trackingToken", language)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold">{orderResult.trackingToken}</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.trackingToken, "tracking")} data-testid="button-copy-tracking-token">
+                        {copied === "tracking" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button onClick={() => navigate(`/tracking?token=${orderResult.trackingToken}`)} data-testid="button-track-order">
+                {t("nav.trackOrder", language)}
+              </Button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">{t("checkout.step5", language)}</h2>
             <Card>
               <CardHeader>
                 <CardTitle>{language === "vi" ? "Thông tin khách hàng" : "Customer Information"}</CardTitle>
@@ -861,218 +1036,6 @@ export default function CheckoutPage() {
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === "vi" ? "Thanh toán tiền cọc" : "Pay Deposit"}</CardTitle>
-                <CardDescription>
-                  {language === "vi" 
-                    ? "Quét mã QR hoặc chuyển khoản để thanh toán tiền cọc, sau đó nhập link ảnh chứng từ thanh toán"
-                    : "Scan QR code or transfer to pay deposit, then enter the payment proof image URL"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-center">
-                  <div className="p-4 bg-white rounded-lg">
-                    <img 
-                      src="/assets/vietcombank-qr.png" 
-                      alt="Vietcombank QR Payment" 
-                      className="w-64 h-auto object-contain" 
-                    />
-                  </div>
-                </div>
-                <div className="text-left space-y-2 text-sm">
-                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-bank-name-pre">
-                    <span className="text-muted-foreground">{t("payment.bankName", language)}</span>
-                    <span className="font-medium">Vietcombank (VCB)</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-account-number-pre">
-                    <span className="text-muted-foreground">{t("payment.accountNumber", language)}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-medium">9983270995</span>
-                      <Button variant="ghost" size="icon" onClick={() => handleCopy("9983270995", "acct-pre")} data-testid="button-copy-account-pre">
-                        {copied === "acct-pre" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center p-2.5 rounded bg-muted/50" data-testid="text-account-holder-pre">
-                    <span className="text-muted-foreground">{t("payment.accountHolder", language)}</span>
-                    <span className="font-medium">LE THI THANH TU</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2.5 rounded bg-primary/10" data-testid="text-deposit-amount-pre">
-                    <span className="text-muted-foreground">{language === "vi" ? "Số tiền cọc" : "Deposit amount"}</span>
-                    <span className="font-semibold text-primary">{formatCurrency(deposit, language)}</span>
-                  </div>
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                  <Label>
-                    {language === "vi" ? "Ảnh chứng từ thanh toán" : "Payment proof image"} *
-                  </Label>
-                  
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    data-testid="input-payment-proof-file"
-                  />
-                  
-                  {!paymentProofUrl ? (
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <ImageIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {language === "vi" 
-                          ? "Tải ảnh chứng từ thanh toán của bạn"
-                          : "Upload your payment proof image"}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        data-testid="button-upload-payment-proof"
-                      >
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            {language === "vi" ? `Đang tải... ${progress}%` : `Uploading... ${progress}%`}
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4 mr-2" />
-                            {language === "vi" ? "Chọn ảnh" : "Select Image"}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="border rounded-lg p-3">
-                      <div className="relative">
-                        <img 
-                          src={paymentProofUrl} 
-                          alt="Payment proof" 
-                          className="max-w-full h-auto max-h-48 mx-auto object-contain rounded"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={() => setPaymentProofUrl("")}
-                          data-testid="button-remove-payment-proof"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 mt-2 text-sm text-green-600">
-                        <Check className="h-4 w-4" />
-                        {language === "vi" ? "Đã tải ảnh lên" : "Image uploaded"}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-
-      case 4:
-        if (!orderResult) return null;
-        const qrUrl = `https://img.vietqr.io/image/VCB-1234567890-compact2.jpg?amount=${deposit}&addInfo=ORCHID%20${orderResult.orderNumber}&accountName=VUON%20LAN%20HUNG%20CUONG`;
-        return (
-          <div className="space-y-6 text-center">
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Check className="h-8 w-8 text-green-600" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold mb-2">{t("checkout.orderSuccess", language)}</h2>
-              <p className="text-muted-foreground">
-                {language === "vi"
-                  ? "Vui lòng thanh toán tiền cọc để xác nhận đơn hàng"
-                  : "Please pay the deposit to confirm your order"}
-              </p>
-            </div>
-
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
-                  <span className="text-sm text-muted-foreground">{t("orders.orderNumber", language)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold">{orderResult.orderNumber}</span>
-                    <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.orderNumber, "order")} data-testid="button-copy-order-number">
-                      {copied === "order" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
-                  <span className="text-sm">{t("checkout.trackingToken", language)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold">{orderResult.trackingToken}</span>
-                    <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.trackingToken, "tracking")} data-testid="button-copy-tracking-token">
-                      {copied === "tracking" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("payment.scanQR", language)}</CardTitle>
-                <CardDescription>{t("checkout.deposit", language)}: {formatCurrency(deposit, language)}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-center">
-                  <div className="p-4 bg-white rounded-lg">
-                    <img src={qrUrl} alt="VietQR Payment" className="w-64 h-64 object-contain" />
-                  </div>
-                </div>
-                <Separator />
-                <div className="text-left space-y-3">
-                  <h4 className="font-medium">{t("payment.bankInfo", language)}</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center p-2 rounded bg-muted/50">
-                      <span className="text-muted-foreground">{t("payment.bankName", language)}</span>
-                      <span className="font-medium">Vietcombank (VCB)</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-muted/50">
-                      <span className="text-muted-foreground">{t("payment.accountNumber", language)}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">1234567890</span>
-                        <Button variant="ghost" size="icon" onClick={() => handleCopy("1234567890", "account")} data-testid="button-copy-account-post">
-                          {copied === "account" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-muted/50">
-                      <span className="text-muted-foreground">{t("payment.accountHolder", language)}</span>
-                      <span className="font-medium">VUON LAN HUNG CUONG</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-muted/50">
-                      <span className="text-muted-foreground">{t("payment.amount", language)}</span>
-                      <span className="font-semibold text-primary">{formatCurrency(deposit, language)}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-muted/50">
-                      <span className="text-muted-foreground">{t("payment.description", language)}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">ORCHID {orderResult.orderNumber}</span>
-                        <Button variant="ghost" size="icon" onClick={() => handleCopy(`ORCHID ${orderResult.orderNumber}`, "desc")} data-testid="button-copy-desc">
-                          {copied === "desc" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Button onClick={() => navigate(`/tracking?token=${orderResult.trackingToken}`)} data-testid="button-track-order">
-              {t("nav.trackOrder", language)}
-            </Button>
           </div>
         );
 
@@ -1129,7 +1092,7 @@ export default function CheckoutPage() {
 
           {renderStep()}
 
-          {currentStep < 4 && (
+          {!orderResult && currentStep <= 4 && (
             <div className="flex justify-between mt-8 pt-6 border-t">
               <Button
                 variant="outline"
@@ -1143,7 +1106,7 @@ export default function CheckoutPage() {
               <Button onClick={handleNext} disabled={!canProceed() || createOrderMutation.isPending} data-testid="button-next">
                 {createOrderMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : currentStep === 3 ? (
+                ) : currentStep === 4 ? (
                   t("checkout.placeOrder", language)
                 ) : (
                   <>

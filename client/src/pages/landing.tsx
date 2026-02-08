@@ -149,13 +149,8 @@ export default function LandingPage() {
             </div>
             <div className="relative">
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-orchid-200 to-orchid-100 dark:from-orchid-800/30 dark:to-orchid-700/20 flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Flower2 className="h-48 w-48 text-primary/20" />
-                </div>
                 <div className="relative z-10 text-center space-y-4">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
-                    <Flower2 className="h-12 w-12 text-primary" />
-                  </div>
+                  <img src="/assets/logo.png" alt="Hùng Cường Orchid Garden" className="w-32 h-32 mx-auto object-contain" />
                   <p className="font-semibold text-lg">
                     {language === "vi" ? "Vườn Lan Hùng Cường" : "Orchid Garden"}
                   </p>
@@ -261,9 +256,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Flower2 className="h-4 w-4 text-primary-foreground" />
-              </div>
+              <img src="/assets/logo.png" alt="Hùng Cường" className="h-8 w-8 rounded-lg object-contain" />
               <span className="font-semibold">{t("landing.heroTitle", language)}</span>
             </div>
             <p className="text-sm text-muted-foreground">

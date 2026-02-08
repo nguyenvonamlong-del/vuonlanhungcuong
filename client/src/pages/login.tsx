@@ -59,9 +59,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-              <Flower2 className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <img src="/assets/logo.png" alt="Hùng Cường" className="h-16 w-16 rounded-xl object-contain" />
           </div>
           <div>
             <CardTitle className="text-2xl">{t("login.title", language)}</CardTitle>

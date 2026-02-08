@@ -69,9 +69,7 @@ export function StaffSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Flower2 className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img src="/assets/logo.png" alt="Hùng Cường" className="h-10 w-10 rounded-lg object-contain" />
           <div className="flex flex-col">
             <span className="font-semibold text-sm">{t("landing.heroTitle", language)}</span>
             <span className="text-xs text-muted-foreground">Admin Panel</span>

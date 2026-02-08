@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
-import { Flower2, ShoppingCart, Menu, X, MessageCircle } from "lucide-react";
+import { ShoppingCart, Menu, X, MessageCircle } from "lucide-react";
+import { Flower2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -27,9 +28,7 @@ export function PublicHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Flower2 className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img src="/assets/logo.png" alt="Hùng Cường" className="h-10 w-10 rounded-lg object-contain" />
           <span className="hidden font-semibold text-lg sm:inline-block">
             {t("landing.heroTitle", language)}
           </span>
