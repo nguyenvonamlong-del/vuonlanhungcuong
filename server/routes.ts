@@ -81,6 +81,9 @@ const publicOrderSchema = z.object({
 const PgSession = connectPgSimple(session);
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
+  // Trust proxy for production (Replit runs behind a reverse proxy)
+  app.set("trust proxy", 1);
+
   // Session setup
   app.use(
     session({
@@ -95,6 +98,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
+        sameSite: "lax",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       },
     })

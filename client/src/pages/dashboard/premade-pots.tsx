@@ -55,6 +55,10 @@ export default function PremadePotsPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<PremadePot | null>(null);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkVideos, setBulkVideos] = useState<File[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
 
   const { data: pots = [], isLoading } = useQuery<PremadePot[]>({
     queryKey: ["/api/premade-pots"],
@@ -274,6 +278,67 @@ export default function PremadePotsPage() {
     }
   };
 
+  const handleBulkVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setBulkVideos(prev => [...prev, ...files]);
+    if (e.target) e.target.value = "";
+  };
+
+  const removeBulkVideo = (index: number) => {
+    setBulkVideos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleBulkUpload = async () => {
+    if (bulkVideos.length === 0) return;
+    setBulkUploading(true);
+    setBulkProgress({ current: 0, total: bulkVideos.length });
+
+    let successCount = 0;
+    for (let i = 0; i < bulkVideos.length; i++) {
+      setBulkProgress({ current: i + 1, total: bulkVideos.length });
+      try {
+        const result = await uploadFile(bulkVideos[i]);
+        if (result?.objectPath) {
+          const videoName = bulkVideos[i].name.replace(/\.[^.]+$/, "");
+          await apiRequest("POST", "/api/premade-pots", {
+            nameVi: videoName,
+            nameEn: videoName,
+            descriptionVi: "",
+            descriptionEn: "",
+            price: "0",
+            stockQuantity: 0,
+            images: [],
+            videos: [result.objectPath],
+            tags: [],
+            orchidTypes: [],
+            potSize: "MEDIUM",
+            difficultyLevel: "MEDIUM",
+            careInstructionsVi: "",
+            careInstructionsEn: "",
+            status: "INACTIVE",
+            featured: false,
+          });
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to upload video ${bulkVideos[i].name}:`, err);
+      }
+    }
+
+    const totalCount = bulkVideos.length;
+    setBulkUploading(false);
+    setBulkVideos([]);
+    setBulkDialogOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/premade-pots"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/shop/pots"] });
+    toast({
+      title: t("common.success", language),
+      description: language === "vi"
+        ? `Đã tạo ${successCount}/${totalCount} chậu từ video`
+        : `Created ${successCount}/${totalCount} pots from videos`,
+    });
+  };
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -315,10 +380,16 @@ export default function PremadePotsPage() {
                   data-testid="input-search"
                 />
               </div>
-              <Button onClick={openCreate} data-testid="button-add-pot">
-                <Plus className="h-4 w-4 mr-2" />
-                {t("common.add", language)}
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={openCreate} data-testid="button-add-pot">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("common.add", language)}
+                </Button>
+                <Button variant="outline" onClick={() => { setBulkVideos([]); setBulkDialogOpen(true); }} data-testid="button-bulk-add">
+                  <Video className="h-4 w-4 mr-2" />
+                  {language === "vi" ? "Thêm hàng loạt" : "Bulk Add"}
+                </Button>
+              </div>
             </div>
 
             <Card>
@@ -975,6 +1046,112 @@ export default function PremadePotsPage() {
               data-testid="button-confirm-delete"
             >
               {t("common.delete", language)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkDialogOpen} onOpenChange={(open) => { if (!bulkUploading) setBulkDialogOpen(open); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "vi" ? "Thêm hàng loạt video" : "Bulk Add Videos"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {language === "vi"
+                ? "Chọn nhiều video cùng lúc. Mỗi video sẽ tạo một sản phẩm mới ở trạng thái Không hoạt động để bạn bổ sung chi tiết sau."
+                : "Select multiple videos at once. Each video will create a new product in Inactive status for you to add details later."}
+            </p>
+            <div>
+              <Label className="block mb-2">
+                {language === "vi" ? "Chọn video" : "Select Videos"}
+              </Label>
+              <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6 cursor-pointer hover-elevate transition-colors">
+                <input
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  onChange={handleBulkVideoSelect}
+                  className="hidden"
+                  disabled={bulkUploading}
+                  data-testid="input-bulk-videos"
+                />
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {language === "vi" ? "Nhấn để chọn video (có thể chọn nhiều)" : "Click to select videos (multiple allowed)"}
+                </span>
+              </label>
+            </div>
+            {bulkVideos.length > 0 && (
+              <div className="space-y-2">
+                <Label>
+                  {language === "vi" ? `${bulkVideos.length} video đã chọn` : `${bulkVideos.length} videos selected`}
+                </Label>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {bulkVideos.map((file, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50" data-testid={`bulk-video-item-${idx}`}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Video className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="text-sm truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeBulkVideo(idx)}
+                        disabled={bulkUploading}
+                        data-testid={`button-remove-bulk-video-${idx}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {bulkUploading && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">
+                    {language === "vi"
+                      ? `Đang tải lên ${bulkProgress.current}/${bulkProgress.total}...`
+                      : `Uploading ${bulkProgress.current}/${bulkProgress.total}...`}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all"
+                    style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDialogOpen(false)} disabled={bulkUploading}>
+              {t("common.cancel", language)}
+            </Button>
+            <Button
+              onClick={handleBulkUpload}
+              disabled={bulkVideos.length === 0 || bulkUploading}
+              data-testid="button-start-bulk-upload"
+            >
+              {bulkUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {language === "vi" ? "Đang tải..." : "Uploading..."}
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {language === "vi" ? `Tải lên ${bulkVideos.length} video` : `Upload ${bulkVideos.length} videos`}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

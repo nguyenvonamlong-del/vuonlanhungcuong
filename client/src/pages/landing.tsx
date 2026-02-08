@@ -1,10 +1,14 @@
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin } from "lucide-react";
+import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, ShoppingCart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/public-header";
 import { useApp } from "@/context/AppContext";
-import { t } from "@/lib/i18n";
+import { t, formatCurrency } from "@/lib/i18n";
+import type { PremadePot } from "@shared/schema";
 
 const features = [
   { icon: Flower2, titleKey: "landing.feature1Title", descKey: "landing.feature1Desc" },
@@ -43,6 +47,143 @@ const testimonials = [
   },
 ];
 
+function ProductShowcase({ language }: { language: string }) {
+  const { data: pots = [] } = useQuery<PremadePot[]>({
+    queryKey: ["/api/shop/pots"],
+  });
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const activePots = pots.filter(p => p.status === "ACTIVE" && ((p as any).videos?.length > 0 || (p.images?.length ?? 0) > 0));
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (el) el.addEventListener("scroll", checkScroll);
+    return () => { if (el) el.removeEventListener("scroll", checkScroll); };
+  }, [activePots.length]);
+
+  const scroll = (dir: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.7;
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+  };
+
+  if (activePots.length === 0) return null;
+
+  return (
+    <section className="py-12 md:py-16 bg-background" data-testid="section-product-showcase">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">
+            {language === "vi" ? "Sản phẩm nổi bật" : "Featured Products"}
+          </h2>
+          <p className="text-muted-foreground">
+            {language === "vi"
+              ? "Khám phá bộ sưu tập lan hồ điệp tuyệt đẹp của chúng tôi"
+              : "Explore our beautiful phalaenopsis orchid collection"}
+          </p>
+        </div>
+        <div className="relative">
+          {canScrollLeft && (
+            <Button
+              size="icon"
+              variant="outline"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10"
+              onClick={() => scroll("left")}
+              data-testid="button-showcase-prev"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+          {canScrollRight && (
+            <Button
+              size="icon"
+              variant="outline"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
+              onClick={() => scroll("right")}
+              data-testid="button-showcase-next"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+          <div
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {activePots.map((pot) => {
+              const hasVideo = (pot as any).videos?.length > 0;
+              const hasImage = (pot.images?.length ?? 0) > 0;
+              return (
+                <Link key={pot.id} href="/shop">
+                  <div
+                    className="shrink-0 w-64 md:w-72 snap-start rounded-lg bg-card border cursor-pointer"
+                    data-testid={`showcase-product-${pot.id}`}
+                  >
+                    <div className="relative aspect-[4/3] bg-muted">
+                      {hasVideo ? (
+                        <video
+                          src={(pot as any).videos[0]}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                          loop
+                          autoPlay
+                          data-testid={`showcase-video-${pot.id}`}
+                        />
+                      ) : hasImage ? (
+                        <img
+                          src={pot.images![0]}
+                          alt={language === "vi" ? pot.nameVi : pot.nameEn}
+                          className="w-full h-full object-cover"
+                          data-testid={`showcase-img-${pot.id}`}
+                        />
+                      ) : null}
+                      {hasVideo && (
+                        <Badge variant="secondary" className="absolute top-2 right-2 gap-1 text-xs">
+                          <Play className="h-3 w-3" />
+                          Video
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-3 space-y-1">
+                      <h3 className="font-semibold text-sm line-clamp-1" data-testid={`showcase-name-${pot.id}`}>
+                        {language === "vi" ? pot.nameVi : pot.nameEn}
+                      </h3>
+                      <p className="text-sm font-bold" data-testid={`showcase-price-${pot.id}`}>
+                        {formatCurrency(pot.price, language as any)}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+        <div className="text-center mt-6">
+          <Link href="/shop">
+            <Button variant="outline" className="gap-2" data-testid="button-view-all-products">
+              <ShoppingCart className="h-4 w-4" />
+              {language === "vi" ? "Xem tất cả sản phẩm" : "View All Products"}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
   const { language } = useApp();
 
@@ -64,7 +205,7 @@ export default function LandingPage() {
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               {t("landing.heroSubtitle", language)}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center pt-4">
               <Link href="/shop">
                 <Button size="lg" className="gap-2 text-base" data-testid="button-hero-cta">
                   {t("landing.heroCta", language)}
@@ -81,6 +222,8 @@ export default function LandingPage() {
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
       </section>
+
+      <ProductShowcase language={language} />
 
       <section className="py-20 md:py-28 bg-background">
         <div className="container mx-auto px-4">

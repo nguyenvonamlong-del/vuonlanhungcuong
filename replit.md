@@ -4,6 +4,12 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-08**: Landing Page & Admin Enhancements:
+  - **Product Showcase on Landing**: Horizontal scrollable carousel of premade products with media thumbnails (video priority) displayed right below hero CTA buttons
+  - **Bulk Video Upload**: Admin can bulk-upload multiple videos at once from Premade Pots page; each video creates an INACTIVE placeholder pot entry for later editing
+  - **Production Login Fix**: Added trust proxy and sameSite cookie config to fix session issues behind reverse proxy
+  - **Video-first thumbnails**: Shop product cards now prioritize video over photo as thumbnail
+
 - **2026-02-08**: Pre-made Pots Enhancement:
   - **Multi-media support**: Each pre-made pot now supports multiple photos AND multiple videos upload via object storage
   - **Auto-tagging system**: Tags are automatically generated from selected orchid types (orchidComposition), decoration types, and pot type using canonical format (orchid:{id}, decoration:{id}, pot:{id})
