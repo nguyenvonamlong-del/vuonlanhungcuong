@@ -602,7 +602,7 @@ export default function ShopPage() {
                           {(pot.images?.length || 0) + (pot.videos?.length || 0)} {language === "vi" ? "ảnh/video" : "media"}
                         </Badge>
                       )}
-                      {pot.stockQuantity <= 0 && (
+                      {pot.status === "OUT_OF_STOCK" && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <Badge variant="destructive">{t("shop.outOfStock", language)}</Badge>
                         </div>
@@ -635,7 +635,7 @@ export default function ShopPage() {
                     <CardFooter className="p-4 pt-0 flex flex-col gap-1 mt-auto">
                       <Button
                         className="w-full gap-2"
-                        disabled={pot.stockQuantity <= 0}
+                        disabled={pot.status === "OUT_OF_STOCK"}
                         onClick={() => handleAddToCart(pot)}
                         data-testid={`button-add-cart-${pot.id}`}
                       >
@@ -770,8 +770,8 @@ export default function ShopPage() {
                     )}
 
                     <div className="flex items-center gap-2" data-testid="detail-stock">
-                      <span className="text-sm text-muted-foreground">{language === "vi" ? "Còn lại" : "Stock"}:</span>
-                      <span className="text-sm">{selectedPot.stockQuantity} {language === "vi" ? "chậu" : "pots"}</span>
+                      <span className="text-sm text-muted-foreground">{language === "vi" ? "Trạng thái" : "Status"}:</span>
+                      <span className="text-sm">{selectedPot.status === "OUT_OF_STOCK" ? (language === "vi" ? "Hết hàng" : "Out of stock") : (language === "vi" ? "Còn hàng" : "Available")}</span>
                     </div>
                   </div>
                   {(language === "vi" ? selectedPot.careInstructionsVi : selectedPot.careInstructionsEn) && (
@@ -787,7 +787,7 @@ export default function ShopPage() {
                   <Button
                     className="w-full gap-2"
                     size="lg"
-                    disabled={selectedPot.stockQuantity <= 0}
+                    disabled={selectedPot.status === "OUT_OF_STOCK"}
                     onClick={() => {
                       handleAddToCart(selectedPot);
                       setSelectedPot(null);
