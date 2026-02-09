@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "wouter";
-import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, Pause, X, ShoppingCart, Palette, Volume2, VolumeX } from "lucide-react";
+import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, Pause, X, ShoppingCart, Palette, Volume2, VolumeX, Maximize2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,35 +48,37 @@ const testimonials = [
   },
 ];
 
-function VideoLightbox({ videoSrc, pot, language, onClose }: { videoSrc: string; pot: PremadePot; language: string; onClose: () => void }) {
+function MediaLightbox({ mediaSrc, mediaType, pot, language, onClose }: { mediaSrc: string; mediaType: "video" | "photo"; pot: PremadePot; language: string; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    const video = videoRef.current;
-    if (video) {
-      video.muted = true;
-      video.play().then(() => {
-        setIsPlaying(true);
-        video.muted = false;
-        setIsMuted(false);
-      }).catch(() => {
-        setIsPlaying(false);
-      });
+    if (mediaType === "video") {
+      const video = videoRef.current;
+      if (video) {
+        video.muted = true;
+        video.play().then(() => {
+          setIsPlaying(true);
+          video.muted = false;
+          setIsMuted(false);
+        }).catch(() => {
+          setIsPlaying(false);
+        });
+      }
     }
     return () => { document.body.style.overflow = ""; };
-  }, []);
+  }, [mediaType]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === " ") { e.preventDefault(); togglePlay(); }
+      if (e.key === " " && mediaType === "video") { e.preventDefault(); togglePlay(); }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [onClose, mediaType]);
 
   const toggleMute = useCallback(() => {
     const video = videoRef.current;
@@ -107,26 +109,53 @@ function VideoLightbox({ videoSrc, pot, language, onClose }: { videoSrc: string;
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative rounded-lg overflow-hidden bg-black">
-          <video
-            ref={videoRef}
-            src={videoSrc}
-            className="w-full max-h-[80vh] object-contain"
-            playsInline
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onEnded={() => setIsPlaying(false)}
-            data-testid={`lightbox-video-${pot.id}`}
-          />
+          {mediaType === "video" ? (
+            <>
+              <video
+                ref={videoRef}
+                src={mediaSrc}
+                className="w-full max-h-[80vh] object-contain"
+                playsInline
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
+                data-testid={`lightbox-video-${pot.id}`}
+              />
+              <button
+                className="absolute inset-0 flex items-center justify-center transition-opacity"
+                style={{ opacity: isPlaying ? 0 : 1 }}
+                onClick={togglePlay}
+                data-testid={`button-lightbox-play-${pot.id}`}
+              >
+                <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
+                  {isPlaying ? (
+                    <Pause className="h-7 w-7 text-foreground fill-foreground" />
+                  ) : (
+                    <Play className="h-7 w-7 text-foreground fill-foreground ml-0.5" />
+                  )}
+                </div>
+              </button>
+            </>
+          ) : (
+            <img
+              src={mediaSrc}
+              alt={language === "vi" ? pot.nameVi : pot.nameEn}
+              className="w-full max-h-[80vh] object-contain"
+              data-testid={`lightbox-image-${pot.id}`}
+            />
+          )}
           <div className="absolute top-3 right-3 flex gap-2">
-            <Button
-              size="icon"
-              variant="outline"
-              className="bg-black/50 border-white/30 text-white backdrop-blur-sm"
-              onClick={toggleMute}
-              data-testid={`button-mute-${pot.id}`}
-            >
-              {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </Button>
+            {mediaType === "video" && (
+              <Button
+                size="icon"
+                variant="outline"
+                className="bg-black/50 border-white/30 text-white backdrop-blur-sm"
+                onClick={toggleMute}
+                data-testid={`button-mute-${pot.id}`}
+              >
+                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </Button>
+            )}
             <Button
               size="icon"
               variant="outline"
@@ -137,20 +166,6 @@ function VideoLightbox({ videoSrc, pot, language, onClose }: { videoSrc: string;
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <button
-            className="absolute inset-0 flex items-center justify-center transition-opacity"
-            style={{ opacity: isPlaying ? 0 : 1 }}
-            onClick={togglePlay}
-            data-testid={`button-lightbox-play-${pot.id}`}
-          >
-            <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-              {isPlaying ? (
-                <Pause className="h-7 w-7 text-foreground fill-foreground" />
-              ) : (
-                <Play className="h-7 w-7 text-foreground fill-foreground ml-0.5" />
-              )}
-            </div>
-          </button>
         </div>
         <div className="mt-3 text-center">
           <h3 className="text-white font-semibold text-lg" data-testid={`lightbox-name-${pot.id}`}>
@@ -166,7 +181,7 @@ function VideoLightbox({ videoSrc, pot, language, onClose }: { videoSrc: string;
   );
 }
 
-function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
+function ShowcaseCard({ pot, language }: { pot: PremadePot; language: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const hasVideo = (pot as any).videos?.length > 0;
@@ -175,14 +190,15 @@ function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
   const openLightbox = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (hasVideo) {
-      setLightboxOpen(true);
-    }
-  }, [hasVideo]);
+    setLightboxOpen(true);
+  }, []);
 
   const closeLightbox = useCallback(() => {
     setLightboxOpen(false);
   }, []);
+
+  const mediaType = hasVideo ? "video" as const : "photo" as const;
+  const mediaSrc = hasVideo ? (pot as any).videos[0] : hasImage ? pot.images![0] : "";
 
   return (
     <>
@@ -213,12 +229,24 @@ function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
               </button>
             </>
           ) : hasImage ? (
-            <img
-              src={pot.images![0]}
-              alt={language === "vi" ? pot.nameVi : pot.nameEn}
-              className="w-full h-full object-cover"
-              data-testid={`showcase-img-${pot.id}`}
-            />
+            <>
+              <img
+                src={pot.images![0]}
+                alt={language === "vi" ? pot.nameVi : pot.nameEn}
+                className="w-full h-full object-cover"
+                data-testid={`showcase-img-${pot.id}`}
+              />
+              <button
+                onClick={openLightbox}
+                aria-label="Enlarge photo"
+                className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group/enlarge"
+                data-testid={`button-enlarge-${pot.id}`}
+              >
+                <div className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center opacity-0 group-hover/enlarge:opacity-100 transition-opacity">
+                  <Maximize2 className="h-4 w-4 text-foreground" />
+                </div>
+              </button>
+            </>
           ) : null}
         </div>
         <div className="p-3 space-y-1">
@@ -230,9 +258,10 @@ function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
           </p>
         </div>
       </div>
-      {lightboxOpen && hasVideo && (
-        <VideoLightbox
-          videoSrc={(pot as any).videos[0]}
+      {lightboxOpen && mediaSrc && (
+        <MediaLightbox
+          mediaSrc={mediaSrc}
+          mediaType={mediaType}
           pot={pot}
           language={language}
           onClose={closeLightbox}
@@ -316,7 +345,7 @@ function ProductShowcase({ language }: { language: string }) {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {activePots.map((pot) => (
-            <VideoCard key={pot.id} pot={pot} language={language} />
+            <ShowcaseCard key={pot.id} pot={pot} language={language} />
           ))}
         </div>
       </div>
