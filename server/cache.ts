@@ -68,15 +68,11 @@ class RedisBackedCache implements ICacheAdapter {
       await this.redis.ping();
       this.connected = true;
       console.log("[cache] Redis connection verified");
-      const allKeys = Object.values(CACHE_KEYS);
-      for (const key of allKeys) {
-        const data = await this.redis.get<string>(this.prefix + key);
-        if (data) {
-          const parsed = typeof data === "string" ? JSON.parse(data) : data;
-          this.memory.set(key, parsed, CACHE_TTL.MEDIUM);
-        }
+      const keys = await this.redis.keys(this.prefix + "*");
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
       }
-      console.log("[cache] Warmed up from Redis successfully");
+      console.log("[cache] Cleared stale Redis cache on startup");
     } catch (err) {
       this.connected = false;
       console.warn("[cache] Redis connection failed, using in-memory only:", (err as Error).message);

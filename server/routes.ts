@@ -165,11 +165,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
   });
 
+  // Cache management (admin only)
+  app.post("/api/admin/cache/clear", async (req, res) => {
+    try {
+      cache.clear();
+      res.json({ success: true, message: "All caches cleared" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to clear cache" });
+    }
+  });
+
   // Catalog routes
   app.get("/api/catalog", async (req, res) => {
     try {
-      const cached = cache.get(CACHE_KEYS.CATALOG_ITEMS);
-      if (cached) return res.json(cached);
+      const refresh = req.query.refresh === "true";
+      if (!refresh) {
+        const cached = cache.get(CACHE_KEYS.CATALOG_ITEMS);
+        if (cached) return res.json(cached);
+      }
       const items = await storage.getCatalogItems();
       cache.set(CACHE_KEYS.CATALOG_ITEMS, items, CACHE_TTL.MEDIUM);
       res.json(items);
