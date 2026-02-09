@@ -4,6 +4,12 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-09**: Admin & Landing Page Enhancements:
+  - **Bulk Inline Editing**: New "Bulk Edit" mode on Premade Pots page shows grid of cards with media preview + inline editable fields (name, orchid type, quantity, decoration, pot type) with per-card save
+  - **Video Lightbox**: Featured Products on landing page now opens a full-screen lightbox overlay when video is played - enlarged view with no auto-loop
+  - **Video Sound**: Lightbox video plays with sound enabled by default, with mute/unmute toggle
+  - **Play/Pause Controls**: Lightbox supports play/pause via click or spacebar, close via X button or Escape key
+
 - **2026-02-08**: Scaling for 1000+ Concurrent Users:
   - **Database indexes**: 39 indexes added across all tables for status filters, foreign keys, timestamps, phone/email lookups
   - **Redis-backed cache**: Dual-layer cache (in-memory + Upstash Redis) with graceful fallback if Redis unavailable

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "wouter";
-import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, ShoppingCart, Palette } from "lucide-react";
+import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, Pause, X, ShoppingCart, Palette, Volume2, VolumeX } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,79 +48,197 @@ const testimonials = [
   },
 ];
 
-function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
+function VideoLightbox({ videoSrc, pot, language, onClose }: { videoSrc: string; pot: PremadePot; language: string; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const hasVideo = (pot as any).videos?.length > 0;
-  const hasImage = (pot.images?.length ?? 0) > 0;
-
-  const handlePlayToggle = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
     const video = videoRef.current;
-    if (!video) return;
-    if (isPlaying) {
-      video.pause();
-      setIsPlaying(false);
-    } else {
+    if (video) {
+      video.muted = true;
       video.play().then(() => {
         setIsPlaying(true);
+        video.muted = false;
+        setIsMuted(false);
       }).catch(() => {
         setIsPlaying(false);
       });
     }
-  }, [isPlaying]);
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === " ") { e.preventDefault(); togglePlay(); }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  const toggleMute = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
+      onClick={onClose}
+      data-testid={`lightbox-overlay-${pot.id}`}
+    >
+      <div
+        className="relative w-full max-w-3xl mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative rounded-lg overflow-hidden bg-black">
+          <video
+            ref={videoRef}
+            src={videoSrc}
+            className="w-full max-h-[80vh] object-contain"
+            playsInline
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onEnded={() => setIsPlaying(false)}
+            data-testid={`lightbox-video-${pot.id}`}
+          />
+          <div className="absolute top-3 right-3 flex gap-2">
+            <Button
+              size="icon"
+              variant="outline"
+              className="bg-black/50 border-white/30 text-white backdrop-blur-sm"
+              onClick={toggleMute}
+              data-testid={`button-mute-${pot.id}`}
+            >
+              {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              className="bg-black/50 border-white/30 text-white backdrop-blur-sm"
+              onClick={onClose}
+              data-testid={`button-close-lightbox-${pot.id}`}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <button
+            className="absolute inset-0 flex items-center justify-center transition-opacity"
+            style={{ opacity: isPlaying ? 0 : 1 }}
+            onClick={togglePlay}
+            data-testid={`button-lightbox-play-${pot.id}`}
+          >
+            <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
+              {isPlaying ? (
+                <Pause className="h-7 w-7 text-foreground fill-foreground" />
+              ) : (
+                <Play className="h-7 w-7 text-foreground fill-foreground ml-0.5" />
+              )}
+            </div>
+          </button>
+        </div>
+        <div className="mt-3 text-center">
+          <h3 className="text-white font-semibold text-lg" data-testid={`lightbox-name-${pot.id}`}>
+            {language === "vi" ? pot.nameVi : pot.nameEn}
+          </h3>
+          <p className="text-white/80 font-bold" data-testid={`lightbox-price-${pot.id}`}>
+            {formatCurrency(pot.price, language as any)}
+          </p>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function VideoCard({ pot, language }: { pot: PremadePot; language: string }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const hasVideo = (pot as any).videos?.length > 0;
+  const hasImage = (pot.images?.length ?? 0) > 0;
+
+  const openLightbox = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (hasVideo) {
+      setLightboxOpen(true);
+    }
+  }, [hasVideo]);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxOpen(false);
+  }, []);
 
   return (
-    <div
-      className="shrink-0 w-64 md:w-72 snap-start rounded-lg bg-card border cursor-pointer"
-      data-testid={`showcase-product-${pot.id}`}
-    >
-      <div className="relative aspect-[4/3] bg-muted rounded-t-lg overflow-hidden">
-        {hasVideo ? (
-          <>
-            <video
-              ref={videoRef}
-              src={(pot as any).videos[0]}
+    <>
+      <div
+        className="shrink-0 w-64 md:w-72 snap-start rounded-lg bg-card border cursor-pointer"
+        data-testid={`showcase-product-${pot.id}`}
+      >
+        <div className="relative aspect-[4/3] bg-muted rounded-t-lg overflow-hidden">
+          {hasVideo ? (
+            <>
+              <video
+                src={(pot as any).videos[0]}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                preload="metadata"
+                data-testid={`showcase-video-${pot.id}`}
+              />
+              <button
+                onClick={openLightbox}
+                aria-label="Play video"
+                className="absolute inset-0 flex items-center justify-center bg-black/20"
+                data-testid={`button-play-${pot.id}`}
+              >
+                <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                  <Play className="h-5 w-5 text-foreground fill-foreground ml-0.5" />
+                </div>
+              </button>
+            </>
+          ) : hasImage ? (
+            <img
+              src={pot.images![0]}
+              alt={language === "vi" ? pot.nameVi : pot.nameEn}
               className="w-full h-full object-cover"
-              muted
-              playsInline
-              preload="metadata"
-              data-testid={`showcase-video-${pot.id}`}
-              onEnded={() => setIsPlaying(false)}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (isPlaying) { videoRef.current?.pause(); setIsPlaying(false); } }}
+              data-testid={`showcase-img-${pot.id}`}
             />
-            <button
-              onClick={handlePlayToggle}
-              aria-label={isPlaying ? "Pause video" : "Play video"}
-              className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity"
-              style={{ opacity: isPlaying ? 0 : 1, pointerEvents: isPlaying ? "none" : "auto" }}
-              data-testid={`button-play-${pot.id}`}
-            >
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                <Play className="h-5 w-5 text-foreground fill-foreground ml-0.5" />
-              </div>
-            </button>
-          </>
-        ) : hasImage ? (
-          <img
-            src={pot.images![0]}
-            alt={language === "vi" ? pot.nameVi : pot.nameEn}
-            className="w-full h-full object-cover"
-            data-testid={`showcase-img-${pot.id}`}
-          />
-        ) : null}
+          ) : null}
+        </div>
+        <div className="p-3 space-y-1">
+          <h3 className="font-semibold text-sm line-clamp-1" data-testid={`showcase-name-${pot.id}`}>
+            {language === "vi" ? pot.nameVi : pot.nameEn}
+          </h3>
+          <p className="text-sm font-bold" data-testid={`showcase-price-${pot.id}`}>
+            {formatCurrency(pot.price, language as any)}
+          </p>
+        </div>
       </div>
-      <div className="p-3 space-y-1">
-        <h3 className="font-semibold text-sm line-clamp-1" data-testid={`showcase-name-${pot.id}`}>
-          {language === "vi" ? pot.nameVi : pot.nameEn}
-        </h3>
-        <p className="text-sm font-bold" data-testid={`showcase-price-${pot.id}`}>
-          {formatCurrency(pot.price, language as any)}
-        </p>
-      </div>
-    </div>
+      {lightboxOpen && hasVideo && (
+        <VideoLightbox
+          videoSrc={(pot as any).videos[0]}
+          pot={pot}
+          language={language}
+          onClose={closeLightbox}
+        />
+      )}
+    </>
   );
 }
 

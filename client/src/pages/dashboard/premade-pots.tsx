@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle, Package, Palette, X, Upload, Loader2, Video, Tag, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Flower2, Star, StarOff, MessageCircle, Package, Palette, X, Upload, Loader2, Video, Tag, RefreshCw, LayoutGrid, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +59,15 @@ export default function PremadePotsPage() {
   const [bulkVideos, setBulkVideos] = useState<File[]>([]);
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [bulkEditData, setBulkEditData] = useState<Record<string, {
+    nameVi?: string;
+    orchidTypeId?: string;
+    stockQuantity?: number;
+    decorationTypeId?: string;
+    potTypeId?: string;
+  }>>({});
+  const [bulkEditSaving, setBulkEditSaving] = useState<Record<string, boolean>>({});
 
   const { data: pots = [], isLoading } = useQuery<PremadePot[]>({
     queryKey: ["/api/premade-pots"],
@@ -235,6 +244,99 @@ export default function PremadePotsPage() {
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  const getBulkEditValue = (potId: string, field: string, fallback: any) => {
+    const data = bulkEditData[potId];
+    if (data && field in data) return (data as any)[field];
+    return fallback;
+  };
+
+  const updateBulkEditField = (potId: string, field: string, value: any) => {
+    setBulkEditData(prev => ({
+      ...prev,
+      [potId]: { ...prev[potId], [field]: value },
+    }));
+  };
+
+  const handleBulkEditSave = async (pot: PremadePot) => {
+    const edits = bulkEditData[pot.id];
+    if (!edits) return;
+
+    const patchData: any = {};
+    if (edits.nameVi !== undefined) patchData.nameVi = edits.nameVi;
+    if (edits.stockQuantity !== undefined) patchData.stockQuantity = edits.stockQuantity;
+    if (edits.potTypeId !== undefined) {
+      patchData.potTypeId = edits.potTypeId || null;
+      const pt = potTypes.find(p => p.id === edits.potTypeId);
+      patchData.potTypeName = pt ? (language === "vi" ? pt.nameVi : pt.nameEn) : null;
+    }
+    if (edits.orchidTypeId !== undefined) {
+      const cat = catalogItems.find(c => c.id === edits.orchidTypeId);
+      if (cat) {
+        patchData.orchidComposition = [{
+          catalogItemId: cat.id,
+          speciesNameVi: cat.speciesNameVi,
+          speciesNameEn: cat.speciesNameEn,
+          color: cat.color,
+          quantity: 1,
+        }];
+      } else if (!edits.orchidTypeId) {
+        patchData.orchidComposition = [];
+      }
+    }
+    if (edits.decorationTypeId !== undefined) {
+      const dec = decorationTypes.find(d => d.id === edits.decorationTypeId);
+      if (dec) {
+        patchData.decorations = [{
+          decorationTypeId: dec.id,
+          nameVi: dec.nameVi,
+          nameEn: dec.nameEn,
+        }];
+      } else if (!edits.decorationTypeId) {
+        patchData.decorations = [];
+      }
+    }
+
+    if (Object.keys(patchData).length === 0) return;
+
+    setBulkEditSaving(prev => ({ ...prev, [pot.id]: true }));
+    try {
+      await apiRequest("PATCH", `/api/premade-pots/${pot.id}`, patchData);
+      queryClient.invalidateQueries({ queryKey: ["/api/premade-pots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shop/pots"] });
+      setBulkEditData(prev => {
+        const next = { ...prev };
+        delete next[pot.id];
+        return next;
+      });
+      toast({
+        title: t("common.success", language),
+        description: language === "vi" ? `Đã cập nhật "${pot.nameVi}"` : `Updated "${pot.nameEn}"`,
+      });
+    } catch {
+      toast({
+        title: t("common.error", language),
+        description: language === "vi" ? "Không thể lưu" : "Failed to save",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkEditSaving(prev => ({ ...prev, [pot.id]: false }));
+    }
+  };
+
+  const getFirstOrchidTypeId = (pot: PremadePot): string => {
+    if (pot.orchidComposition && Array.isArray(pot.orchidComposition) && pot.orchidComposition.length > 0) {
+      return (pot.orchidComposition[0] as any).catalogItemId || "";
+    }
+    return "";
+  };
+
+  const getFirstDecorationTypeId = (pot: PremadePot): string => {
+    if (pot.decorations && Array.isArray(pot.decorations) && pot.decorations.length > 0) {
+      return (pot.decorations[0] as any).decorationTypeId || "";
+    }
+    return "";
+  };
+
   const openCreate = () => {
     setEditingItem(null);
     setFormData(initialFormData);
@@ -389,23 +491,188 @@ export default function PremadePotsPage() {
                   <Video className="h-4 w-4 mr-2" />
                   {language === "vi" ? "Thêm hàng loạt" : "Bulk Add"}
                 </Button>
+                <Button
+                  variant={bulkEditMode ? "default" : "outline"}
+                  onClick={() => { setBulkEditMode(!bulkEditMode); setBulkEditData({}); }}
+                  className={bulkEditMode ? "toggle-elevate toggle-elevated" : "toggle-elevate"}
+                  data-testid="button-bulk-edit"
+                >
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  {language === "vi" ? "Sửa hàng loạt" : "Bulk Edit"}
+                </Button>
               </div>
             </div>
 
-            <Card>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-4 space-y-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : filteredItems.length === 0 ? (
+            {isLoading ? (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </CardContent>
+              </Card>
+            ) : filteredItems.length === 0 ? (
+              <Card>
+                <CardContent className="p-0">
                   <div className="text-center py-12">
                     <Flower2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                     <p className="text-muted-foreground">{t("common.noData", language)}</p>
                   </div>
-                ) : (
+                </CardContent>
+              </Card>
+            ) : bulkEditMode ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" data-testid="bulk-edit-grid">
+                {filteredItems.map((pot) => {
+                  const firstVideo = (pot as any).videos?.[0];
+                  const firstImage = pot.images?.[0];
+                  const isSaving = bulkEditSaving[pot.id] || false;
+                  const hasEdits = !!bulkEditData[pot.id] && Object.keys(bulkEditData[pot.id]).length > 0;
+
+                  return (
+                    <Card key={pot.id} data-testid={`bulk-edit-card-${pot.id}`}>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="aspect-video w-full rounded-md bg-muted flex items-center justify-center">
+                          {firstVideo ? (
+                            <video
+                              src={firstVideo}
+                              className="w-full h-full rounded-md object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                              data-testid={`video-preview-${pot.id}`}
+                            />
+                          ) : firstImage ? (
+                            <img
+                              src={firstImage}
+                              alt={pot.nameVi}
+                              className="w-full h-full rounded-md object-cover"
+                              data-testid={`image-preview-${pot.id}`}
+                            />
+                          ) : (
+                            <Flower2 className="h-10 w-10 text-muted-foreground opacity-50" />
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={pot.status} />
+                            {pot.featured && <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />}
+                          </div>
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {formatCurrency(pot.price, language)}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {language === "vi" ? "Tên (Tiếng Việt)" : "Name (Vietnamese)"}
+                            </Label>
+                            <Input
+                              value={getBulkEditValue(pot.id, "nameVi", pot.nameVi)}
+                              onChange={(e) => updateBulkEditField(pot.id, "nameVi", e.target.value)}
+                              data-testid={`bulk-edit-name-${pot.id}`}
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {language === "vi" ? "Loại lan" : "Orchid Type"}
+                            </Label>
+                            <Select
+                              value={getBulkEditValue(pot.id, "orchidTypeId", getFirstOrchidTypeId(pot))}
+                              onValueChange={(v) => updateBulkEditField(pot.id, "orchidTypeId", v)}
+                            >
+                              <SelectTrigger data-testid={`bulk-edit-orchid-${pot.id}`}>
+                                <SelectValue placeholder={language === "vi" ? "Chọn loại lan" : "Select orchid"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {catalogItems.filter(c => c.status === "ACTIVE").map((item) => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {t("catalog.stock", language)}
+                            </Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={getBulkEditValue(pot.id, "stockQuantity", pot.stockQuantity)}
+                              onChange={(e) => updateBulkEditField(pot.id, "stockQuantity", parseInt(e.target.value) || 0)}
+                              data-testid={`bulk-edit-quantity-${pot.id}`}
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {language === "vi" ? "Trang trí" : "Decoration"}
+                            </Label>
+                            <Select
+                              value={getBulkEditValue(pot.id, "decorationTypeId", getFirstDecorationTypeId(pot))}
+                              onValueChange={(v) => updateBulkEditField(pot.id, "decorationTypeId", v)}
+                            >
+                              <SelectTrigger data-testid={`bulk-edit-decoration-${pot.id}`}>
+                                <SelectValue placeholder={language === "vi" ? "Chọn trang trí" : "Select decoration"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {decorationTypes.filter(d => d.status === "ACTIVE").map((dec) => (
+                                  <SelectItem key={dec.id} value={dec.id}>
+                                    {language === "vi" ? dec.nameVi : dec.nameEn}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {language === "vi" ? "Loại chậu" : "Pot Type"}
+                            </Label>
+                            <Select
+                              value={getBulkEditValue(pot.id, "potTypeId", pot.potTypeId || "")}
+                              onValueChange={(v) => updateBulkEditField(pot.id, "potTypeId", v)}
+                            >
+                              <SelectTrigger data-testid={`bulk-edit-pot-type-${pot.id}`}>
+                                <SelectValue placeholder={language === "vi" ? "Chọn loại chậu" : "Select pot type"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {potTypes.filter(p => p.status === "ACTIVE").map((pt) => (
+                                  <SelectItem key={pt.id} value={pt.id}>
+                                    {language === "vi" ? pt.nameVi : pt.nameEn}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <Button
+                          className="w-full"
+                          disabled={!hasEdits || isSaving}
+                          onClick={() => handleBulkEditSave(pot)}
+                          data-testid={`bulk-edit-save-${pot.id}`}
+                        >
+                          {isSaving ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          {language === "vi" ? "Lưu" : "Save"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -531,9 +798,9 @@ export default function PremadePotsPage() {
                       </TableBody>
                     </Table>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </main>
         </SidebarInset>
       </div>
