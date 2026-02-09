@@ -113,7 +113,7 @@ export default function LoginPage() {
               {language === "vi" ? "Tài khoản demo:" : "Demo accounts:"}
             </p>
             <div className="space-y-1 text-sm">
-              <p><span className="font-medium">Admin:</span> admin / admin123</p>
+              <p><span className="font-medium">Admin:</span> admin / Admin123456</p>
               <p><span className="font-medium">Manager:</span> manager / manager123</p>
               <p><span className="font-medium">Employee:</span> employee / employee123</p>
             </div>
