@@ -240,6 +240,7 @@ export const premadePots = pgTable("premade_pots", {
   descriptionVi: text("description_vi"),
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull(),
+  totalCost: decimal("total_cost", { precision: 12, scale: 0 }),
   stockQuantity: integer("stock_quantity").notNull().default(0),
   images: text("images").array(),
   videos: text("videos").array(),

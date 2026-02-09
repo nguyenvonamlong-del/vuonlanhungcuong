@@ -63,7 +63,7 @@ export default function PremadePotsPage() {
   const [bulkEditData, setBulkEditData] = useState<Record<string, {
     nameVi?: string;
     orchidTypeId?: string;
-    stockQuantity?: number;
+    totalCost?: string;
     decorationTypeId?: string;
     potTypeId?: string;
   }>>({});
@@ -263,7 +263,7 @@ export default function PremadePotsPage() {
 
     const patchData: any = {};
     if (edits.nameVi !== undefined) patchData.nameVi = edits.nameVi;
-    if (edits.stockQuantity !== undefined) patchData.stockQuantity = edits.stockQuantity;
+    if (edits.totalCost !== undefined) patchData.totalCost = edits.totalCost;
     if (edits.potTypeId !== undefined) {
       patchData.potTypeId = edits.potTypeId || null;
       const pt = potTypes.find(p => p.id === edits.potTypeId);
@@ -598,14 +598,15 @@ export default function PremadePotsPage() {
 
                           <div>
                             <Label className="text-xs text-muted-foreground">
-                              {t("catalog.stock", language)}
+                              {language === "vi" ? "Tổng giá vốn" : "Total Cost"}
                             </Label>
                             <Input
                               type="number"
                               min={0}
-                              value={getBulkEditValue(pot.id, "stockQuantity", pot.stockQuantity)}
-                              onChange={(e) => updateBulkEditField(pot.id, "stockQuantity", parseInt(e.target.value) || 0)}
-                              data-testid={`bulk-edit-quantity-${pot.id}`}
+                              value={getBulkEditValue(pot.id, "totalCost", pot.totalCost || "")}
+                              onChange={(e) => updateBulkEditField(pot.id, "totalCost", e.target.value)}
+                              placeholder="VND"
+                              data-testid={`bulk-edit-total-cost-${pot.id}`}
                             />
                           </div>
 

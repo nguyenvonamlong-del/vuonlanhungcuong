@@ -154,9 +154,52 @@ const REQUIRED_CATALOG_ITEMS = [
     genus: "Phalaenopsis",
     tags: ["map-pattern", "flash"],
   },
+  {
+    id: "1f2b3c4d-1111-4aaa-8bbb-000000000025",
+    species_name_vi: "Vàng Mỹ Nhân 1 ngồng",
+    species_name_en: "My Nhan Yellow Phalaenopsis (Single Spike)",
+    color: "Yellow",
+    height_cm: 35,
+    price_per_unit: 160000,
+    cost_per_unit: 115000,
+    stock_quantity: 100,
+    min_order_quantity: 5,
+    description_vi: "Giống lan hồ điệp Vàng Mỹ Nhân 1 ngồng, kích thước 3.5",
+    description_en: "My Nhan Yellow Phalaenopsis single spike variety, size 3.5",
+    status: "ACTIVE",
+    sku: "PHA-YL-MNH-SG-35",
+    genus: "Phalaenopsis",
+    tags: ["yellow", "my-nhan", "single-spike"],
+  },
+  {
+    id: "1f2b3c4d-1111-4aaa-8bbb-000000000026",
+    species_name_vi: "Vàng Mỹ Nhân 2 ngồng",
+    species_name_en: "My Nhan Yellow Phalaenopsis (Double Spike)",
+    color: "Yellow",
+    height_cm: 35,
+    price_per_unit: 180000,
+    cost_per_unit: 115000,
+    stock_quantity: 100,
+    min_order_quantity: 5,
+    description_vi: "Giống lan hồ điệp Vàng Mỹ Nhân 2 ngồng, kích thước 3.5",
+    description_en: "My Nhan Yellow Phalaenopsis double spike variety, size 3.5",
+    status: "ACTIVE",
+    sku: "PHA-YL-MNH-DB-35",
+    genus: "Phalaenopsis",
+    tags: ["yellow", "my-nhan", "double-spike"],
+  },
 ];
 
+async function ensurePremadePotColumns(): Promise<void> {
+  try {
+    await pool.query(`ALTER TABLE premade_pots ADD COLUMN IF NOT EXISTS total_cost numeric(12, 0)`);
+  } catch (err) {
+    console.error("[sync] Failed to ensure premade_pots columns:", (err as Error).message);
+  }
+}
+
 export async function syncCatalogItems(): Promise<void> {
+  await ensurePremadePotColumns();
   try {
     const ids = REQUIRED_CATALOG_ITEMS.map((item) => item.id);
     const result = await pool.query(
