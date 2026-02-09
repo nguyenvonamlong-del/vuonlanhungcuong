@@ -108,6 +108,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Object storage routes for file uploads
   registerObjectStorageRoutes(app);
 
+  async function logActivity(req: any, action: string, entityType: string, entityId: string | null, description: string, metadata?: any) {
+    try {
+      await storage.createActivity({
+        userId: (req.session as any)?.userId || null,
+        action,
+        entityType,
+        entityId,
+        description,
+        metadata: metadata || null,
+      });
+    } catch (err) {
+      console.error("Failed to log activity:", err);
+    }
+  }
+
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -123,11 +138,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       (req.session as any).userId = user.id;
-      req.session.save((err) => {
+      req.session.save(async (err) => {
         if (err) {
           console.error("Session save error:", err);
           return res.status(500).json({ error: "Login failed" });
         }
+        await logActivity(req, "LOGIN", "AUTH", user.id, "User logged in: " + user.username);
         res.json({
           id: user.id,
           username: user.username,
@@ -140,7 +156,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
+  app.post("/api/auth/logout", async (req, res) => {
+    const userId = (req.session as any)?.userId;
+    if (userId) {
+      await logActivity(req, "LOGOUT", "AUTH", userId, "User logged out");
+    }
     req.session.destroy(() => {
       res.json({ success: true });
     });
@@ -222,6 +242,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const data = insertCatalogItemSchema.parse(req.body);
       const item = await storage.createCatalogItem(data);
       cache.invalidate(CACHE_KEYS.CATALOG_ITEMS);
+      await logActivity(req, "CREATE", "CATALOG", item.id, "Created catalog item: " + (item as any).speciesNameVi);
       res.status(201).json(item);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Invalid data" });
@@ -235,6 +256,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Item not found" });
       }
       cache.invalidate(CACHE_KEYS.CATALOG_ITEMS);
+      await logActivity(req, "UPDATE", "CATALOG", req.params.id, "Updated catalog item: " + req.params.id);
       res.json(item);
     } catch (error) {
       res.status(500).json({ error: "Failed to update" });
@@ -245,6 +267,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       await storage.deleteCatalogItem(req.params.id);
       cache.invalidate(CACHE_KEYS.CATALOG_ITEMS);
+      await logActivity(req, "DELETE", "CATALOG", req.params.id, "Deleted catalog item: " + req.params.id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete" });
@@ -297,6 +320,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const pot = await storage.createPremadePot(data);
       cache.invalidate(CACHE_KEYS.ALL_POTS);
       cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
+      await logActivity(req, "CREATE", "PREMADE_POT", pot.id, "Created premade pot: " + pot.nameVi);
       res.status(201).json(pot);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Invalid data" });
@@ -315,6 +339,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       cache.invalidate(CACHE_KEYS.ALL_POTS);
       cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
+      await logActivity(req, "UPDATE", "PREMADE_POT", req.params.id, "Updated premade pot: " + req.params.id);
       res.json(pot);
     } catch (error) {
       res.status(500).json({ error: "Failed to update" });
@@ -326,6 +351,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await storage.deletePremadePot(req.params.id);
       cache.invalidate(CACHE_KEYS.ALL_POTS);
       cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
+      await logActivity(req, "DELETE", "PREMADE_POT", req.params.id, "Deleted premade pot: " + req.params.id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete" });
@@ -355,6 +381,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const data = insertTechnicianSchema.parse(req.body);
       const tech = await storage.createTechnician(data);
+      await logActivity(req, "CREATE", "TECHNICIAN", tech.id, "Created technician: " + tech.fullName);
       res.status(201).json(tech);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Invalid data" });
@@ -367,6 +394,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!tech) {
         return res.status(404).json({ error: "Technician not found" });
       }
+      await logActivity(req, "UPDATE", "TECHNICIAN", req.params.id, "Updated technician: " + req.params.id);
       res.json(tech);
     } catch (error) {
       res.status(500).json({ error: "Failed to update" });
@@ -376,6 +404,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/technicians/:id", async (req, res) => {
     try {
       await storage.deleteTechnician(req.params.id);
+      await logActivity(req, "DELETE", "TECHNICIAN", req.params.id, "Deleted technician: " + req.params.id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete" });
@@ -395,6 +424,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/customers", async (req, res) => {
     try {
       const customer = await storage.createCustomer(req.body);
+      await logActivity(req, "CREATE", "CUSTOMER", customer.id, "Created customer: " + customer.fullName);
       res.json(customer);
     } catch (error) {
       res.status(500).json({ error: "Failed to create customer" });
@@ -404,6 +434,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.put("/api/customers/:id", async (req, res) => {
     try {
       const customer = await storage.updateCustomer(req.params.id, req.body);
+      await logActivity(req, "UPDATE", "CUSTOMER", req.params.id, "Updated customer: " + req.params.id);
       res.json(customer);
     } catch (error) {
       res.status(500).json({ error: "Failed to update customer" });
@@ -516,6 +547,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
       
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
+      await logActivity(req, "CREATE", "ORDER", order.id, "New order #" + order.orderNumber + " placed by " + customerName, { total: serverTotal, pots: pots.length });
       res.status(201).json({
         orderNumber: order.orderNumber,
         trackingToken: order.trackingToken,
@@ -534,6 +566,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Order not found" });
       }
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
+      await logActivity(req, "UPDATE", "ORDER", req.params.id, "Order status changed to: " + status, { status });
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update status" });
@@ -557,6 +590,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
+      await logActivity(req, "UPDATE", "ORDER", req.params.id, "Technician assigned to order", { technicianId });
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to assign technician" });
@@ -572,6 +606,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Order not found" });
       }
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
+      await logActivity(req, "UPDATE", "ORDER", req.params.id, "Payment updated: " + type, { type });
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update payment" });
@@ -586,6 +621,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Order not found" });
       }
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
+      await logActivity(req, "UPDATE", "ORDER", req.params.id, "Order cancelled", { reason });
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to cancel order" });
@@ -689,6 +725,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
       const updated = await storage.updateSetting(key, value);
       cache.invalidate(CACHE_KEYS.SETTINGS);
+      await logActivity(req, "UPDATE", "SETTING", key, "Setting updated: " + key, { value });
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update setting" });
@@ -844,6 +881,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const created = await storage.createPotType(req.body);
       cache.invalidate(CACHE_KEYS.POT_TYPES);
+      await logActivity(req, "CREATE", "POT_TYPE", created.id, "Created pot type: " + (created as any).nameVi);
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create pot type" });
@@ -858,6 +896,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const updated = await storage.updatePotType(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Not found" });
       cache.invalidate(CACHE_KEYS.POT_TYPES);
+      await logActivity(req, "UPDATE", "POT_TYPE", req.params.id, "Updated pot type: " + req.params.id);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update pot type" });
@@ -871,6 +910,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       await storage.deletePotType(req.params.id);
       cache.invalidate(CACHE_KEYS.POT_TYPES);
+      await logActivity(req, "DELETE", "POT_TYPE", req.params.id, "Deleted pot type: " + req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete pot type" });
@@ -886,6 +926,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const created = await storage.createDecorationType(req.body);
       cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
+      await logActivity(req, "CREATE", "DECORATION_TYPE", created.id, "Created decoration type: " + (created as any).nameVi);
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create decoration type" });
@@ -900,6 +941,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const updated = await storage.updateDecorationType(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Not found" });
       cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
+      await logActivity(req, "UPDATE", "DECORATION_TYPE", req.params.id, "Updated decoration type: " + req.params.id);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update decoration type" });
@@ -913,6 +955,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       await storage.deleteDecorationType(req.params.id);
       cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
+      await logActivity(req, "DELETE", "DECORATION_TYPE", req.params.id, "Deleted decoration type: " + req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete decoration type" });
@@ -935,6 +978,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createPaymentType(req.body);
+      await logActivity(req, "CREATE", "PAYMENT_TYPE", created.id, "Created payment type");
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create payment type" });
@@ -948,6 +992,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const updated = await storage.updatePaymentType(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Not found" });
+      await logActivity(req, "UPDATE", "PAYMENT_TYPE", req.params.id, "Updated payment type: " + req.params.id);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update payment type" });
@@ -960,6 +1005,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deletePaymentType(req.params.id);
+      await logActivity(req, "DELETE", "PAYMENT_TYPE", req.params.id, "Deleted payment type: " + req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete payment type" });
@@ -998,6 +1044,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       const created = await storage.createSupplier(req.body);
+      await logActivity(req, "CREATE", "SUPPLIER", created.id, "Created supplier: " + (created as any).name);
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create supplier" });
@@ -1011,6 +1058,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const updated = await storage.updateSupplier(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Supplier not found" });
+      await logActivity(req, "UPDATE", "SUPPLIER", req.params.id, "Updated supplier: " + req.params.id);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update supplier" });
@@ -1023,6 +1071,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Unauthorized" });
       }
       await storage.deleteSupplier(req.params.id);
+      await logActivity(req, "DELETE", "SUPPLIER", req.params.id, "Deleted supplier: " + req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete supplier" });
@@ -1066,6 +1115,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         orderNumber,
         createdBy: (req.session as any).user.id,
       });
+      await logActivity(req, "CREATE", "PURCHASE_ORDER", created.id, "Created purchase order: " + orderNumber);
       res.status(201).json(created);
     } catch (error) {
       res.status(500).json({ error: "Failed to create purchase order" });
@@ -1079,6 +1129,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const updated = await storage.updatePurchaseOrder(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: "Purchase order not found" });
+      await logActivity(req, "UPDATE", "PURCHASE_ORDER", req.params.id, "Updated purchase order: " + req.params.id);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update purchase order" });
@@ -1299,6 +1350,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const item = await storage.createUser(userData);
       const { password: pwd, ...safeUser } = item;
+      await logActivity(req, "CREATE", "USER", item.id, "Created user: " + item.username, { role: item.role });
       res.json(safeUser);
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -1337,6 +1389,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "User not found" });
       }
       const { password: pwd, ...safeUser } = item;
+      await logActivity(req, "UPDATE", "USER", req.params.id, "Updated user: " + req.params.id);
       res.json(safeUser);
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -1360,6 +1413,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "Cannot delete your own account" });
       }
       await storage.deleteUser(req.params.id);
+      await logActivity(req, "DELETE", "USER", req.params.id, "Deleted user: " + req.params.id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete user" });
@@ -1388,6 +1442,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "User not found" });
       }
       const { password, ...safeUser } = item;
+      await logActivity(req, "UPDATE", "USER", req.params.id, "User status changed to: " + status, { status });
       res.json(safeUser);
     } catch (error) {
       res.status(500).json({ error: "Failed to update user status" });
@@ -1403,6 +1458,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { priorityId } = req.body;
       const order = await storage.updateOrder(req.params.id, { priorityId });
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
+      await logActivity(req, "UPDATE", "ORDER", req.params.id, "Order priority updated", { priorityId });
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update order priority" });

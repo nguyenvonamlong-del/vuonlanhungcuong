@@ -17,7 +17,7 @@ export default function AuditLogPage() {
   const { openChatbot } = useChatbot();
 
   const { data: activities = [], isLoading } = useQuery<Activity[]>({
-    queryKey: ["/api/activities"],
+    queryKey: ["/api/activities?limit=500"],
     refetchInterval: 30000,
   });
 
@@ -39,8 +39,14 @@ export default function AuditLogPage() {
       TECHNICIAN: { vi: "Kỹ thuật viên", en: "Technician" },
       USER: { vi: "Người dùng", en: "User" },
       SETTINGS: { vi: "Cài đặt", en: "Settings" },
+      SETTING: { vi: "Cài đặt", en: "Setting" },
       SUPPLIER: { vi: "Nhà cung cấp", en: "Supplier" },
       PURCHASE_ORDER: { vi: "Đơn nhập hàng", en: "Purchase Order" },
+      AUTH: { vi: "Xác thực", en: "Authentication" },
+      PREMADE_POT: { vi: "Chậu sẵn", en: "Premade Pot" },
+      POT_TYPE: { vi: "Loại chậu", en: "Pot Type" },
+      DECORATION_TYPE: { vi: "Loại trang trí", en: "Decoration Type" },
+      PAYMENT_TYPE: { vi: "Phương thức thanh toán", en: "Payment Type" },
     };
     return labels[type]?.[language] || type;
   };
