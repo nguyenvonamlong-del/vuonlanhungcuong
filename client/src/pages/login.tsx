@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Flower2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,20 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function LoginPage() {
-  const { language, setUser } = useApp();
+  const { language, setUser, isAuthenticated } = useApp();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const pendingRedirect = useRef(false);
+
+  useEffect(() => {
+    if (pendingRedirect.current && isAuthenticated) {
+      pendingRedirect.current = false;
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,12 +37,12 @@ export default function LoginPage() {
       const user = await response.json();
       
       if (user.id) {
+        pendingRedirect.current = true;
         setUser(user);
         toast({
           title: t("common.success", language),
           description: language === "vi" ? "Đăng nhập thành công!" : "Login successful!",
         });
-        navigate("/dashboard");
       } else {
         throw new Error("Invalid response");
       }
