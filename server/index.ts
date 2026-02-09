@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
+import { syncCatalogItems } from "./sync-catalog";
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,6 +97,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await syncCatalogItems();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
