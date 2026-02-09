@@ -507,7 +507,7 @@ export default function OrdersPage() {
                 <SelectValue placeholder={language === "vi" ? "Chọn kỹ thuật viên" : "Select technician"} />
               </SelectTrigger>
               <SelectContent>
-                {technicians.map((tech) => (
+                {[...technicians].sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "")).map((tech) => (
                   <SelectItem key={tech.id} value={tech.id}>
                     {tech.fullName} ({tech.currentWorkload}/{tech.maxWorkload})
                   </SelectItem>

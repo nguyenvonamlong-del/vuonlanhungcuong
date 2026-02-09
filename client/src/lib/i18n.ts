@@ -244,3 +244,11 @@ export function formatCurrency(amount: number | string, lang: Language = 'vi'): 
   if (isNaN(num)) return '0';
   return num.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US') + (lang === 'vi' ? '₫' : ' VND');
 }
+
+export function formatPriceRange(min: number | string, max: number | string | null | undefined, lang: Language = 'vi'): string {
+  const minVal = typeof min === 'string' ? parseFloat(min) : min;
+  const maxVal = max != null ? (typeof max === 'string' ? parseFloat(max) : max) : NaN;
+  if (isNaN(minVal)) return '0';
+  if (isNaN(maxVal) || maxVal <= minVal) return formatCurrency(minVal, lang);
+  return `${formatCurrency(minVal, lang)} - ${formatCurrency(maxVal, lang)}`;
+}

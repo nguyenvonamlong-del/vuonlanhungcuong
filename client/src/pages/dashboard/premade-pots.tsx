@@ -587,7 +587,7 @@ export default function PremadePotsPage() {
                                 <SelectValue placeholder={language === "vi" ? "Chọn loại lan" : "Select orchid"} />
                               </SelectTrigger>
                               <SelectContent>
-                                {catalogItems.filter(c => c.status === "ACTIVE").map((item) => (
+                                {[...catalogItems.filter(c => c.status === "ACTIVE")].sort((a, b) => (language === "vi" ? a.speciesNameVi : a.speciesNameEn).localeCompare(language === "vi" ? b.speciesNameVi : b.speciesNameEn)).map((item) => (
                                   <SelectItem key={item.id} value={item.id}>
                                     {language === "vi" ? item.speciesNameVi : item.speciesNameEn} - {item.color}
                                   </SelectItem>
@@ -622,7 +622,7 @@ export default function PremadePotsPage() {
                                 <SelectValue placeholder={language === "vi" ? "Chọn trang trí" : "Select decoration"} />
                               </SelectTrigger>
                               <SelectContent>
-                                {decorationTypes.filter(d => d.status === "ACTIVE").map((dec) => (
+                                {[...decorationTypes.filter(d => d.status === "ACTIVE")].sort((a, b) => (language === "vi" ? a.nameVi : a.nameEn).localeCompare(language === "vi" ? b.nameVi : b.nameEn)).map((dec) => (
                                   <SelectItem key={dec.id} value={dec.id}>
                                     {language === "vi" ? dec.nameVi : dec.nameEn}
                                   </SelectItem>
@@ -643,7 +643,7 @@ export default function PremadePotsPage() {
                                 <SelectValue placeholder={language === "vi" ? "Chọn loại chậu" : "Select pot type"} />
                               </SelectTrigger>
                               <SelectContent>
-                                {potTypes.filter(p => p.status === "ACTIVE").map((pt) => (
+                                {[...potTypes.filter(p => p.status === "ACTIVE")].sort((a, b) => (language === "vi" ? a.nameVi : a.nameEn).localeCompare(language === "vi" ? b.nameVi : b.nameEn)).map((pt) => (
                                   <SelectItem key={pt.id} value={pt.id}>
                                     {language === "vi" ? pt.nameVi : pt.nameEn}
                                   </SelectItem>

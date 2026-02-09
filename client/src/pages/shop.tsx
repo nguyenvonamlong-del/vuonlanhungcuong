@@ -257,17 +257,17 @@ export default function ShopPage() {
   const orchidOptions = activeOrchids.map(c => ({
     id: c.id,
     name: language === "vi" ? c.speciesNameVi : c.speciesNameEn,
-  }));
+  })).sort((a, b) => a.name.localeCompare(b.name));
 
   const potTypeOptions = activePotTypes.map(p => ({
     id: p.id,
     name: language === "vi" ? p.nameVi : p.nameEn,
-  }));
+  })).sort((a, b) => a.name.localeCompare(b.name));
 
   const decorationOptions = activeDecorations.map(d => ({
     id: d.id,
     name: language === "vi" ? d.nameVi : d.nameEn,
-  }));
+  })).sort((a, b) => a.name.localeCompare(b.name));
 
   const toggleFilter = (list: string[], setList: (v: string[]) => void, id: string) => {
     if (list.includes(id)) {

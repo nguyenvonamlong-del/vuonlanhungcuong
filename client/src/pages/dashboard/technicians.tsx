@@ -467,7 +467,7 @@ export default function TechniciansPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{language === "vi" ? "Không liên kết" : "No link"}</SelectItem>
-                    {users.filter(u => u.status === "ACTIVE").map(user => (
+                    {[...users.filter(u => u.status === "ACTIVE")].sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "")).map(user => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.fullName} ({user.username})
                       </SelectItem>

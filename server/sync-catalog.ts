@@ -190,16 +190,19 @@ const REQUIRED_CATALOG_ITEMS = [
   },
 ];
 
-async function ensurePremadePotColumns(): Promise<void> {
+async function ensureExtraColumns(): Promise<void> {
   try {
     await pool.query(`ALTER TABLE premade_pots ADD COLUMN IF NOT EXISTS total_cost numeric(12, 0)`);
+    await pool.query(`ALTER TABLE pot_types ADD COLUMN IF NOT EXISTS price_max numeric(12, 0)`);
+    await pool.query(`ALTER TABLE decoration_types ADD COLUMN IF NOT EXISTS price_max numeric(12, 0)`);
+    await pool.query(`ALTER TABLE shipping_types ADD COLUMN IF NOT EXISTS base_cost_max numeric(12, 0)`);
   } catch (err) {
-    console.error("[sync] Failed to ensure premade_pots columns:", (err as Error).message);
+    console.error("[sync] Failed to ensure extra columns:", (err as Error).message);
   }
 }
 
 export async function syncCatalogItems(): Promise<void> {
-  await ensurePremadePotColumns();
+  await ensureExtraColumns();
   try {
     const ids = REQUIRED_CATALOG_ITEMS.map((item) => item.id);
     const result = await pool.query(

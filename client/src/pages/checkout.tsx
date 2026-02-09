@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/public-header";
 import { useApp } from "@/context/AppContext";
-import { t, formatCurrency } from "@/lib/i18n";
+import { t, formatCurrency, formatPriceRange } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useUpload } from "@/hooks/use-upload";
@@ -420,10 +420,10 @@ export default function CheckoutPage() {
                             <SelectValue placeholder={language === "vi" ? "Chọn loại chậu" : "Select pot type"} />
                           </SelectTrigger>
                           <SelectContent>
-                            {potTypes.map((pt) => (
+                            {[...potTypes].sort((a, b) => (language === "vi" ? a.nameVi : a.nameEn).localeCompare(language === "vi" ? b.nameVi : b.nameEn)).map((pt) => (
                               <SelectItem key={pt.id} value={pt.id}>
                                 {language === "vi" ? pt.nameVi : pt.nameEn} 
-                                {parseFloat(pt.price as string) > 0 && ` (+${formatCurrency(pt.price, language)})`}
+                                {parseFloat(pt.price as string) > 0 && ` (+${formatPriceRange(pt.price, pt.priceMax, language)})`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -444,10 +444,10 @@ export default function CheckoutPage() {
                             <SelectValue placeholder={language === "vi" ? "Chọn trang trí" : "Select decoration"} />
                           </SelectTrigger>
                           <SelectContent>
-                            {decorationTypes.map((dt) => (
+                            {[...decorationTypes].sort((a, b) => (language === "vi" ? a.nameVi : a.nameEn).localeCompare(language === "vi" ? b.nameVi : b.nameEn)).map((dt) => (
                               <SelectItem key={dt.id} value={dt.id}>
                                 {language === "vi" ? dt.nameVi : dt.nameEn}
-                                {parseFloat(dt.price as string) > 0 && ` (+${formatCurrency(dt.price, language)})`}
+                                {parseFloat(dt.price as string) > 0 && ` (+${formatPriceRange(dt.price, dt.priceMax, language)})`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -484,7 +484,7 @@ export default function CheckoutPage() {
                           <SelectValue placeholder={language === "vi" ? "Nhấn để thêm loại lan..." : "Click to add orchid type..."} />
                         </SelectTrigger>
                         <SelectContent>
-                          {activeItems.map((item) => {
+                          {[...activeItems].sort((a, b) => (language === "vi" ? a.speciesNameVi : a.speciesNameEn).localeCompare(language === "vi" ? b.speciesNameVi : b.speciesNameEn)).map((item) => {
                             const alreadyAdded = pot.orchids.some(o => o.catalogId === item.id);
                             return (
                               <SelectItem key={item.id} value={item.id}>
@@ -770,7 +770,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="font-semibold">{formatCurrency(shipping.baseCost, language)}</div>
+                    <div className="font-semibold">{formatPriceRange(shipping.baseCost, shipping.baseCostMax, language)}</div>
                   </CardContent>
                 </Card>
               ))}
@@ -1004,7 +1004,7 @@ export default function CheckoutPage() {
                             <span className="text-muted-foreground">
                               {language === "vi" ? "Loại chậu" : "Pot Type"}: {language === "vi" ? potType.nameVi : potType.nameEn}
                             </span>
-                            <span>{formatCurrency(potTypePrice, language)}</span>
+                            <span>{formatPriceRange(potType.price, potType.priceMax, language)}</span>
                           </div>
                         )}
                         {decorationType && (
@@ -1012,7 +1012,7 @@ export default function CheckoutPage() {
                             <span className="text-muted-foreground">
                               {language === "vi" ? "Trang trí" : "Decoration"}: {language === "vi" ? decorationType.nameVi : decorationType.nameEn}
                             </span>
-                            <span>{formatCurrency(decorationPrice, language)}</span>
+                            <span>{formatPriceRange(decorationType.price, decorationType.priceMax, language)}</span>
                           </div>
                         )}
                         {pot.orchids.map((orchid) => (

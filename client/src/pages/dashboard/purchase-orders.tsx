@@ -169,11 +169,11 @@ export default function PurchaseOrdersPage() {
   const getAvailableItemsForType = (type: string) => {
     switch (type) {
       case "ORCHID":
-        return catalogItems.map(item => ({ id: item.id, name: item.name, price: parseFloat(item.basePrice) }));
+        return catalogItems.map(item => ({ id: item.id, name: language === "vi" ? item.speciesNameVi : item.speciesNameEn, price: parseFloat(String(item.pricePerUnit)) })).sort((a, b) => a.name.localeCompare(b.name));
       case "POT":
-        return potTypes.map(item => ({ id: item.id, name: item.name, price: parseFloat(item.price || "0") }));
+        return potTypes.map(item => ({ id: item.id, name: language === "vi" ? item.nameVi : item.nameEn, price: parseFloat(item.price || "0") })).sort((a, b) => a.name.localeCompare(b.name));
       case "DECORATION":
-        return decorationTypes.map(item => ({ id: item.id, name: item.name, price: parseFloat(item.price || "0") }));
+        return decorationTypes.map(item => ({ id: item.id, name: language === "vi" ? item.nameVi : item.nameEn, price: parseFloat(item.price || "0") })).sort((a, b) => a.name.localeCompare(b.name));
       default:
         return [];
     }
@@ -428,7 +428,7 @@ export default function PurchaseOrdersPage() {
                   <SelectValue placeholder={language === "vi" ? "Chọn nhà cung cấp..." : "Select supplier..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers.map((s) => (
+                  {[...suppliers].sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>

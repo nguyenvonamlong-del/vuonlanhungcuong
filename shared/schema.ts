@@ -67,6 +67,7 @@ export const potTypes = pgTable("pot_types", {
   descriptionVi: text("description_vi"),
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
+  priceMax: decimal("price_max", { precision: 12, scale: 0 }),
   imageUrl: text("image_url"),
   videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
@@ -89,6 +90,7 @@ export const decorationTypes = pgTable("decoration_types", {
   descriptionVi: text("description_vi"),
   descriptionEn: text("description_en"),
   price: decimal("price", { precision: 12, scale: 0 }).notNull().default("0"),
+  priceMax: decimal("price_max", { precision: 12, scale: 0 }),
   imageUrl: text("image_url"),
   videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
@@ -284,6 +286,7 @@ export const shippingTypes = pgTable("shipping_types", {
   descriptionVi: text("description_vi"),
   descriptionEn: text("description_en"),
   baseCost: decimal("base_cost", { precision: 12, scale: 0 }).notNull(),
+  baseCostMax: decimal("base_cost_max", { precision: 12, scale: 0 }),
   estimatedDays: integer("estimated_days").notNull(),
   status: text("status").notNull().default("ACTIVE"),
 });

@@ -20,7 +20,7 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { StatusBadge } from "@/components/status-badge";
 import { useApp } from "@/context/AppContext";
 import { useChatbot } from "@/context/ChatbotContext";
-import { t, formatCurrency } from "@/lib/i18n";
+import { t, formatCurrency, formatPriceRange } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { CatalogItem, InsertCatalogItem, PotType, DecorationType, ShippingType, PaymentType, PriorityType, Supplier } from "@shared/schema";
@@ -55,9 +55,11 @@ interface GenericFormData {
   descriptionVi?: string;
   descriptionEn?: string;
   price?: string;
+  priceMax?: string;
   imageUrl?: string;
   status: string;
   baseCost?: string;
+  baseCostMax?: string;
   estimatedDays?: number;
   type?: string;
   bankName?: string;
@@ -75,9 +77,11 @@ const initialGenericForm: GenericFormData = {
   descriptionVi: "",
   descriptionEn: "",
   price: "0",
+  priceMax: "",
   imageUrl: "",
   status: "ACTIVE",
   baseCost: "0",
+  baseCostMax: "",
   estimatedDays: 3,
   type: "BANK_TRANSFER",
   bankName: "",
@@ -369,9 +373,11 @@ export default function CatalogPage() {
       descriptionVi: item.descriptionVi || "",
       descriptionEn: item.descriptionEn || "",
       price: String(item.price || item.baseCost || "0"),
+      priceMax: item.priceMax ? String(item.priceMax) : "",
       imageUrl: item.imageUrl || "",
       status: item.status || "ACTIVE",
       baseCost: String(item.baseCost || "0"),
+      baseCostMax: item.baseCostMax ? String(item.baseCostMax) : "",
       estimatedDays: item.estimatedDays || 3,
       type: item.type || "BANK_TRANSFER",
       bankName: item.bankName || "",
@@ -397,6 +403,7 @@ export default function CatalogPage() {
         descriptionVi: genericForm.descriptionVi,
         descriptionEn: genericForm.descriptionEn,
         price: genericForm.price,
+        priceMax: genericForm.priceMax || null,
         imageUrl: genericForm.imageUrl,
         videos: genericVideos,
         status: genericForm.status,
@@ -408,6 +415,7 @@ export default function CatalogPage() {
         descriptionVi: genericForm.descriptionVi,
         descriptionEn: genericForm.descriptionEn,
         baseCost: genericForm.baseCost,
+        baseCostMax: genericForm.baseCostMax || null,
         estimatedDays: genericForm.estimatedDays,
         status: genericForm.status,
       };
@@ -704,11 +712,11 @@ export default function CatalogPage() {
                         {language === "vi" ? item.descriptionVi : item.descriptionEn}
                       </TableCell>
                       {(type === "pot" || type === "decoration") && (
-                        <TableCell className="text-right">{formatCurrency(item.price, language)}</TableCell>
+                        <TableCell className="text-right">{formatPriceRange(item.price, item.priceMax, language)}</TableCell>
                       )}
                       {type === "shipping" && (
                         <>
-                          <TableCell className="text-right">{formatCurrency(item.baseCost, language)}</TableCell>
+                          <TableCell className="text-right">{formatPriceRange(item.baseCost, item.baseCostMax, language)}</TableCell>
                           <TableCell className="text-right">{item.estimatedDays} {language === "vi" ? "ngày" : "days"}</TableCell>
                         </>
                       )}
@@ -1178,7 +1186,7 @@ export default function CatalogPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("catalog.price", language)}</Label>
+                  <Label>{language === "vi" ? "Giá (hoặc giá tối thiểu)" : "Price (or min price)"}</Label>
                   <Input
                     type="number"
                     value={genericForm.price}
@@ -1187,20 +1195,42 @@ export default function CatalogPage() {
                     data-testid="input-price"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>{language === "vi" ? "Giá tối đa (để trống nếu giá cố định)" : "Max price (leave empty for fixed price)"}</Label>
+                  <Input
+                    type="number"
+                    value={genericForm.priceMax || ""}
+                    onChange={(e) => setGenericForm({ ...genericForm, priceMax: e.target.value })}
+                    placeholder={language === "vi" ? "Để trống = giá cố định" : "Empty = fixed price"}
+                    data-testid="input-priceMax"
+                  />
+                </div>
               </>
             )}
 
             {genericDialogType === "shipping" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{language === "vi" ? "Phí vận chuyển" : "Shipping cost"}</Label>
-                  <Input
-                    type="number"
-                    value={genericForm.baseCost}
-                    onChange={(e) => setGenericForm({ ...genericForm, baseCost: e.target.value })}
-                    required
-                    data-testid="input-baseCost"
-                  />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Phí vận chuyển (hoặc phí tối thiểu)" : "Shipping cost (or min cost)"}</Label>
+                    <Input
+                      type="number"
+                      value={genericForm.baseCost}
+                      onChange={(e) => setGenericForm({ ...genericForm, baseCost: e.target.value })}
+                      required
+                      data-testid="input-baseCost"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{language === "vi" ? "Phí tối đa (để trống nếu cố định)" : "Max cost (leave empty for fixed)"}</Label>
+                    <Input
+                      type="number"
+                      value={genericForm.baseCostMax || ""}
+                      onChange={(e) => setGenericForm({ ...genericForm, baseCostMax: e.target.value })}
+                      placeholder={language === "vi" ? "Để trống = phí cố định" : "Empty = fixed cost"}
+                      data-testid="input-baseCostMax"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>{language === "vi" ? "Số ngày giao" : "Estimated days"}</Label>

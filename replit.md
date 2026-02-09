@@ -4,6 +4,15 @@
 A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
 
 ## Recent Changes
+- **2026-02-09**: Dropdown Sorting & Flexible Pricing:
+  - **Dropdown sorting**: All data-driven dropdowns throughout the app now sort values in ascending alphabetical order
+  - **Price range support**: Pot types, decoration types, and shipping types now support either fixed price or price range (min-max)
+  - Added `priceMax` column to pot_types and decoration_types, `baseCostMax` to shipping_types
+  - Admin catalog form shows "Price (or min price)" + "Max price (leave empty for fixed price)" fields
+  - Price ranges displayed as "100,000₫ - 200,000₫" format; fixed prices shown normally
+  - Helper function `formatPriceRange()` in i18n for consistent display
+  - Sync-catalog.ts ensures new columns exist in production on startup
+
 - **2026-02-09**: Admin & Landing Page Enhancements:
   - **Bulk Inline Editing**: New "Bulk Edit" mode on Premade Pots page shows grid of cards with media preview + inline editable fields (name, orchid type, quantity, decoration, pot type) with per-card save
   - **Video Lightbox**: Featured Products on landing page now opens a full-screen lightbox overlay when video is played - enlarged view with no auto-loop
