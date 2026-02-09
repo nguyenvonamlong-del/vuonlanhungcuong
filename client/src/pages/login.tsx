@@ -108,17 +108,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 p-4 rounded-lg bg-muted/50 border">
-            <p className="text-sm text-muted-foreground mb-2">
-              {language === "vi" ? "Tài khoản demo:" : "Demo accounts:"}
-            </p>
-            <div className="space-y-1 text-sm">
-              <p><span className="font-medium">Admin:</span> admin / Admin123456</p>
-              <p><span className="font-medium">Manager:</span> manager / manager123</p>
-              <p><span className="font-medium">Employee:</span> employee / employee123</p>
-            </div>
-          </div>
-
           <div className="mt-4 text-center">
             <Link href="/">
               <Button variant="ghost" className="text-muted-foreground" data-testid="link-back-home">
