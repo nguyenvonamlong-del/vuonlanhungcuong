@@ -609,11 +609,7 @@ export default function LandingPage() {
 
       <footer className="py-8 border-t bg-background">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <img src="/assets/logo.png" alt="Hùng Cường" className="h-8 w-8 rounded-lg object-contain" />
-              <span className="font-semibold">{t("landing.heroTitle", language)}</span>
-            </div>
+          <div className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-4">
             <p className="text-sm text-muted-foreground">
               © 2024 {t("landing.heroTitle", language)}.{" "}
               {language === "vi" ? "Tất cả quyền được bảo lưu." : "All rights reserved."}
