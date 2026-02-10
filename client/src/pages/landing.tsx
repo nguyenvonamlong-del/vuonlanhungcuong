@@ -611,7 +611,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 {t("landing.heroTitle", language)}.{" "}
+              © 2026 {t("landing.heroTitle", language)}.{" "}
               {language === "vi" ? "Tất cả quyền được bảo lưu." : "All rights reserved."}
             </p>
           </div>
