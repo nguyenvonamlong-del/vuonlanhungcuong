@@ -378,12 +378,24 @@ export const conversations = pgTable("conversations", {
   userType: text("user_type").notNull().default("CUSTOMER"), // CUSTOMER, ADMIN
   userId: varchar("user_id").references(() => users.id),
   sessionId: text("session_id"),
+  relatedEntityType: text("related_entity_type"), // ORDER, PRODUCT, GENERAL
+  relatedEntityId: varchar("related_entity_id"),
+  intent: text("intent"), // PRODUCT_INQUIRY, ORDER_TRACKING, ORDER_PLACEMENT, CARE_TIPS, COMPLAINT, BUSINESS_REPORT, GENERAL
+  status: text("conversation_status").notNull().default("ACTIVE"), // ACTIVE, RESOLVED, ESCALATED, ABANDONED
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  messageCount: integer("message_count").notNull().default(0),
+  resolvedAt: timestamp("resolved_at"),
+  lastMessageAt: timestamp("last_message_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({
   id: true,
   createdAt: true,
+  messageCount: true,
+  resolvedAt: true,
+  lastMessageAt: true,
 });
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
@@ -647,11 +659,20 @@ export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export const outboundShipments = pgTable("outbound_shipments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orderId: varchar("order_id").notNull().references(() => orders.id),
-  status: text("status").notNull().default("PENDING"), // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+  shippingTypeId: varchar("shipping_type_id").references(() => shippingTypes.id),
+  status: text("status").notNull().default("PENDING"), // PENDING, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, FAILED, RETURNED
   carrier: text("carrier"),
   trackingNumber: text("tracking_number"),
+  trackingUrl: text("tracking_url"),
+  shippingAddress: text("shipping_address"),
+  contactPhone: text("contact_phone"),
+  weight: decimal("weight", { precision: 10, scale: 2 }),
+  shippingCost: decimal("shipping_cost", { precision: 12, scale: 0 }),
   expectedDelivery: timestamp("expected_delivery"),
   actualDelivery: timestamp("actual_delivery"),
+  pickedUpAt: timestamp("picked_up_at"),
+  lastStatusUpdate: timestamp("last_status_update"),
+  failureReason: text("failure_reason"),
   notes: text("notes"),
   createdBy: varchar("created_by"),
   updatedBy: varchar("updated_by"),
@@ -664,6 +685,8 @@ export const insertOutboundShipmentSchema = createInsertSchema(outboundShipments
   createdAt: true,
   updatedAt: true,
   actualDelivery: true,
+  pickedUpAt: true,
+  lastStatusUpdate: true,
 });
 export type InsertOutboundShipment = z.infer<typeof insertOutboundShipmentSchema>;
 export type OutboundShipment = typeof outboundShipments.$inferSelect;
@@ -672,11 +695,17 @@ export type OutboundShipment = typeof outboundShipments.$inferSelect;
 export const inboundShipments = pgTable("inbound_shipments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   purchaseOrderId: varchar("purchase_order_id").notNull().references(() => purchaseOrders.id),
-  status: text("status").notNull().default("PENDING"), // PENDING, PICKED_UP, IN_TRANSIT, RECEIVED, FAILED
+  supplierId: varchar("supplier_id").references(() => suppliers.id),
+  status: text("status").notNull().default("PENDING"), // PENDING, PICKED_UP, IN_TRANSIT, RECEIVED, FAILED, RETURNED
   carrier: text("carrier"),
   trackingNumber: text("tracking_number"),
-  expectedDelivery: timestamp("expected_delivery"),
-  actualDelivery: timestamp("actual_delivery"),
+  trackingUrl: text("tracking_url"),
+  shippingCost: decimal("shipping_cost", { precision: 12, scale: 0 }),
+  expectedDelivery: timestamp("expected_arrival"),
+  actualDelivery: timestamp("actual_arrival"),
+  receivedBy: varchar("received_by"),
+  lastStatusUpdate: timestamp("last_status_update"),
+  failureReason: text("failure_reason"),
   notes: text("notes"),
   createdBy: varchar("created_by"),
   updatedBy: varchar("updated_by"),
@@ -689,6 +718,7 @@ export const insertInboundShipmentSchema = createInsertSchema(inboundShipments).
   createdAt: true,
   updatedAt: true,
   actualDelivery: true,
+  lastStatusUpdate: true,
 });
 export type InsertInboundShipment = z.infer<typeof insertInboundShipmentSchema>;
 export type InboundShipment = typeof inboundShipments.$inferSelect;

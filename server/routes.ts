@@ -8,7 +8,7 @@ import { pool } from "./db";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
-import { getOrCreateConversation, getChatMessages, streamChatResponse, getConversationById } from "./chatbot";
+import { getOrCreateConversation, getChatMessages, streamChatResponse, getConversationById, getConversationAnalytics, getAllConversations, updateConversationStatus, linkConversationToEntity } from "./chatbot";
 import { cache, CACHE_KEYS, CACHE_TTL } from "./cache";
 import { OrderService } from "./modules/orders/OrderService";
 import { InventoryService } from "./modules/inventory/InventoryService";
@@ -754,10 +754,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userId = (req.session as any).userId;
       const shipment = await ShipmentService.updateOutboundShipment(req.params.id, req.body, userId);
       if (!shipment) return res.status(404).json({ error: "Shipment not found" });
-      await logActivity(req, "UPDATE", "SHIPMENT", req.params.id, "Outbound shipment updated");
+      await logActivity(req, "UPDATE", "SHIPMENT", req.params.id, 
+        `Outbound shipment updated${req.body.status ? ` -> ${req.body.status}` : ""}`);
       res.json(shipment);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update shipment" });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to update shipment" });
     }
   });
 
@@ -804,10 +805,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userId = (req.session as any).userId;
       const shipment = await ShipmentService.updateInboundShipment(req.params.id, req.body, userId);
       if (!shipment) return res.status(404).json({ error: "Shipment not found" });
-      await logActivity(req, "UPDATE", "SHIPMENT", req.params.id, "Inbound shipment updated");
+      await logActivity(req, "UPDATE", "SHIPMENT", req.params.id, 
+        `Inbound shipment updated${req.body.status ? ` -> ${req.body.status}` : ""}`);
       res.json(shipment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to update shipment" });
+    }
+  });
+
+  app.get("/api/shipments/delayed", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const [delayedOutbound, delayedInbound] = await Promise.all([
+        ShipmentService.getDelayedOutboundShipments(),
+        ShipmentService.getDelayedInboundShipments(),
+      ]);
+      res.json({ outbound: delayedOutbound, inbound: delayedInbound });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update shipment" });
+      res.status(500).json({ error: "Failed to fetch delayed shipments" });
+    }
+  });
+
+  app.get("/api/shipments/stats", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const stats = await ShipmentService.getShipmentStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("[ShipmentService] Stats error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch shipment stats" });
     }
   });
 
@@ -1053,6 +1083,69 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("Error fetching chat messages:", error);
       res.status(500).json({ error: "Failed to fetch chat messages" });
+    }
+  });
+
+  app.get("/api/chat/conversations", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { userType, status, intent } = req.query;
+      const convos = await getAllConversations({
+        userType: userType as string | undefined,
+        status: status as string | undefined,
+        intent: intent as string | undefined,
+      });
+      res.json(convos);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  app.get("/api/chat/analytics", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const analytics = await getConversationAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch chat analytics" });
+    }
+  });
+
+  app.patch("/api/chat/conversations/:id/status", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { status } = req.body;
+      if (!["ACTIVE", "RESOLVED", "ESCALATED", "ABANDONED"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const updated = await updateConversationStatus(req.params.id, status);
+      if (!updated) return res.status(404).json({ error: "Conversation not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update conversation status" });
+    }
+  });
+
+  app.patch("/api/chat/conversations/:id/link", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { entityType, entityId } = req.body;
+      if (!entityType || !entityId) {
+        return res.status(400).json({ error: "entityType and entityId are required" });
+      }
+      const updated = await linkConversationToEntity(req.params.id, entityType, entityId);
+      if (!updated) return res.status(404).json({ error: "Conversation not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to link conversation to entity" });
     }
   });
 

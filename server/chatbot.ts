@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { db } from "./db";
 import { conversations, messages, catalogItems, orders, technicians, customers, premadePots } from "@shared/schema";
-import { eq, desc, sql, and, gte, count, sum } from "drizzle-orm";
+import { eq, desc, sql, and, gte, count, sum, isNull, ne } from "drizzle-orm";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -54,6 +54,48 @@ export interface ChatContext {
   userType: "CUSTOMER" | "ADMIN";
   userId?: string;
   sessionId?: string;
+}
+
+const INTENT_KEYWORDS: Record<string, string[]> = {
+  PRODUCT_INQUIRY: ["giá", "price", "sản phẩm", "product", "lan", "orchid", "loại", "type", "hoa", "flower", "bao nhiêu", "how much", "mua", "buy"],
+  ORDER_TRACKING: ["đơn hàng", "order", "tracking", "theo dõi", "mã đơn", "order number", "giao hàng", "delivery", "tình trạng", "status"],
+  ORDER_PLACEMENT: ["đặt hàng", "place order", "đặt", "order", "mua", "purchase", "checkout", "thanh toán", "payment"],
+  CARE_TIPS: ["chăm sóc", "care", "tưới", "water", "ánh sáng", "light", "phân bón", "fertilizer", "bệnh", "disease", "héo", "wilt"],
+  COMPLAINT: ["phàn nàn", "complaint", "không hài lòng", "dissatisfied", "lỗi", "error", "hỏng", "broken", "trả lại", "return", "hoàn tiền", "refund"],
+  BUSINESS_REPORT: ["báo cáo", "report", "doanh thu", "revenue", "thống kê", "statistics", "tổng kết", "summary", "lợi nhuận", "profit"],
+};
+
+function detectIntent(message: string): string {
+  const lowerMsg = message.toLowerCase();
+  let bestIntent = "GENERAL";
+  let maxScore = 0;
+
+  for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    let score = 0;
+    for (const kw of keywords) {
+      if (lowerMsg.includes(kw)) {
+        score++;
+      }
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestIntent = intent;
+    }
+  }
+
+  return bestIntent;
+}
+
+function extractOrderReference(message: string): string | null {
+  const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const match = message.match(uuidPattern);
+  if (match) return match[0];
+
+  const orderNumPattern = /ORD-?\d+/i;
+  const orderMatch = message.match(orderNumPattern);
+  if (orderMatch) return orderMatch[0];
+
+  return null;
 }
 
 async function getBusinessContext(): Promise<string> {
@@ -178,6 +220,39 @@ export async function getChatMessages(conversationId: string) {
     .orderBy(messages.createdAt);
 }
 
+async function updateConversationMetadata(
+  conversationId: string,
+  userMessage: string,
+  userType: "CUSTOMER" | "ADMIN"
+) {
+  const conversation = await getConversationById(conversationId);
+  if (!conversation) return;
+
+  const updateData: Record<string, any> = {
+    lastMessageAt: new Date(),
+    messageCount: (conversation.messageCount || 0) + 1,
+  };
+
+  if (!conversation.intent) {
+    const intent = detectIntent(userMessage);
+    if (intent !== "GENERAL") {
+      updateData.intent = intent;
+    }
+  }
+
+  if (!conversation.relatedEntityId) {
+    const orderRef = extractOrderReference(userMessage);
+    if (orderRef) {
+      updateData.relatedEntityType = "ORDER";
+      updateData.relatedEntityId = orderRef;
+    }
+  }
+
+  await db.update(conversations)
+    .set(updateData)
+    .where(eq(conversations.id, conversationId));
+}
+
 export async function* streamChatResponse(
   conversationId: string,
   userMessage: string,
@@ -188,6 +263,8 @@ export async function* streamChatResponse(
     role: "user",
     content: userMessage
   });
+
+  await updateConversationMetadata(conversationId, userMessage, context.userType);
 
   const history = await getChatMessages(conversationId);
   const chatHistory = history.slice(-20).map(m => ({
@@ -227,4 +304,90 @@ export async function* streamChatResponse(
     role: "assistant",
     content: fullResponse
   });
+
+  await db.update(conversations)
+    .set({ messageCount: sql`message_count + 1` })
+    .where(eq(conversations.id, conversationId));
+}
+
+export async function getConversationAnalytics() {
+  const [stats] = await db.select({
+    total: count(),
+    active: sql<number>`count(*) FILTER (WHERE conversation_status = 'ACTIVE')::int`,
+    resolved: sql<number>`count(*) FILTER (WHERE conversation_status = 'RESOLVED')::int`,
+    escalated: sql<number>`count(*) FILTER (WHERE conversation_status = 'ESCALATED')::int`,
+    abandoned: sql<number>`count(*) FILTER (WHERE conversation_status = 'ABANDONED')::int`,
+    customerChats: sql<number>`count(*) FILTER (WHERE user_type = 'CUSTOMER')::int`,
+    adminChats: sql<number>`count(*) FILTER (WHERE user_type = 'ADMIN')::int`,
+    totalMessages: sql<number>`COALESCE(SUM(message_count), 0)::int`,
+  }).from(conversations);
+
+  const intentBreakdown = await db.select({
+    intent: conversations.intent,
+    count: count(),
+  }).from(conversations)
+    .where(sql`${conversations.intent} IS NOT NULL`)
+    .groupBy(conversations.intent);
+
+  const recentConversations = await db.select().from(conversations)
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(20);
+
+  return {
+    stats,
+    intentBreakdown,
+    recentConversations,
+  };
+}
+
+export async function getAllConversations(filters?: {
+  userType?: string;
+  status?: string;
+  intent?: string;
+}) {
+  let query = db.select().from(conversations);
+  
+  const conditions = [];
+  if (filters?.userType) {
+    conditions.push(eq(conversations.userType, filters.userType));
+  }
+  if (filters?.status) {
+    conditions.push(eq(conversations.status, filters.status));
+  }
+  if (filters?.intent) {
+    conditions.push(eq(conversations.intent, filters.intent));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return (query as any).orderBy(desc(conversations.lastMessageAt));
+}
+
+export async function updateConversationStatus(
+  conversationId: string,
+  status: "ACTIVE" | "RESOLVED" | "ESCALATED" | "ABANDONED"
+) {
+  const updateData: Record<string, any> = { status };
+  if (status === "RESOLVED") {
+    updateData.resolvedAt = new Date();
+  }
+  const [updated] = await db.update(conversations)
+    .set(updateData)
+    .where(eq(conversations.id, conversationId))
+    .returning();
+  return updated;
+}
+
+export async function linkConversationToEntity(
+  conversationId: string,
+  entityType: string,
+  entityId: string
+) {
+  const [updated] = await db.update(conversations)
+    .set({ relatedEntityType: entityType, relatedEntityId: entityId })
+    .where(eq(conversations.id, conversationId))
+    .returning();
+  return updated;
 }
