@@ -67,6 +67,8 @@ import {
   type InsertOutboundShipment,
   type InboundShipment,
   type InsertInboundShipment,
+  testimonials,
+  type Testimonial,
 } from "@shared/schema";
 import { v4 as uuidv4 } from "uuid";
 
@@ -225,6 +227,9 @@ export interface IStorage {
   getInboundShipmentById(id: string): Promise<InboundShipment | undefined>;
   createInboundShipment(shipment: InsertInboundShipment): Promise<InboundShipment>;
   updateInboundShipment(id: string, shipment: Partial<InsertInboundShipment>): Promise<InboundShipment | undefined>;
+
+  // Testimonials
+  getShowcasedTestimonials(): Promise<Testimonial[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -866,6 +871,10 @@ export class DatabaseStorage implements IStorage {
   async updateInboundShipment(id: string, shipment: Partial<InsertInboundShipment>): Promise<InboundShipment | undefined> {
     const [updated] = await db.update(inboundShipments).set({ ...shipment, updatedAt: new Date() }).where(eq(inboundShipments.id, id)).returning();
     return updated;
+  }
+
+  async getShowcasedTestimonials(): Promise<Testimonial[]> {
+    return db.select().from(testimonials).where(eq(testimonials.isShowcased, true));
   }
 }
 

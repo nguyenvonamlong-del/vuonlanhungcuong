@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
+import { Helmet } from "react-helmet-async";
 import {
   Flower2,
   Plus,
@@ -1062,6 +1063,12 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>{language === "vi" ? "Đặt Hàng - Vườn Lan Hùng Cường" : "Order - Hung Cuong Orchid Garden"}</title>
+        <meta name="description" content={language === "vi"
+          ? "Đặt chậu lan hồ điệp tùy chỉnh hoặc mua chậu lan có sẵn. Thanh toán an toàn, giao hàng nhanh."
+          : "Order custom orchid arrangements or buy premade pots. Secure payment, fast delivery."} />
+      </Helmet>
       <PublicHeader />
 
       <div className="container mx-auto px-4 py-8 flex-1">

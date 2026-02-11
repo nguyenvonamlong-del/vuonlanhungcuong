@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { Search, Check, Clock, Package, Truck, MapPin, XCircle, Flower2, Phone, Mail, HelpCircle, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,6 +123,12 @@ export default function TrackingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>{language === "vi" ? "Theo Dõi Đơn Hàng - Vườn Lan Hùng Cường" : "Track Order - Hung Cuong Orchid Garden"}</title>
+        <meta name="description" content={language === "vi"
+          ? "Theo dõi tình trạng đơn hàng lan hồ điệp của bạn. Nhập mã đơn hàng hoặc số điện thoại."
+          : "Track your orchid order status. Enter your order number or phone number."} />
+      </Helmet>
       <PublicHeader />
 
       <div className="container mx-auto px-4 py-8 flex-1">

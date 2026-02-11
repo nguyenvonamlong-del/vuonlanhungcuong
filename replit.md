@@ -45,3 +45,16 @@ The application is built with a modern web stack, utilizing **React + TypeScript
 - **Replit Object Storage**: Used for secure file uploads, specifically for payment proof images and multi-media for premade pots.
 - **VietQR**: Payment integration for processing transactions.
 - **express-session with PostgreSQL store**: For session management.
+- **react-helmet-async**: Dynamic SEO meta tags for SPA pages (title, description, Open Graph).
+
+## Recent Changes
+- **2026-02-11**: Added dynamic SEO meta tags (title, description, Open Graph) to landing, shop, checkout, and tracking pages using react-helmet-async.
+- **2026-02-11**: Moved hardcoded testimonials to PostgreSQL database (`testimonials` table). Landing page now fetches testimonials from `/api/testimonials` API.
+- **2026-02-11**: Added mobile sticky action bar on landing page with "Call Now" and "Order Now" buttons, visible only on mobile screens.
+- **2026-02-11**: Enhanced chatbot system prompt with detailed orchid care knowledge (watering, light, temperature, humidity, fertilizer, repotting, common issues, after-bloom care).
+- **2026-02-11**: Fixed orchid name display to use `speciesName` field from actual data structure.
+- **2026-02-11**: Disabled video autoplay on product cards (preload="metadata" poster frames only).
+
+## Coding Standards
+- All database queries must use Drizzle's `sql` template literals or query builders, not raw `pool.query()` or string concatenation.
+- `PremadeOrchidItem` uses `speciesName` (single field) in actual stored data, not separate `speciesNameVi`/`speciesNameEn` fields.

@@ -751,6 +751,25 @@ export interface CartItem {
   quantity: number;
 }
 
+// ==================== TESTIMONIALS ====================
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  roleVi: text("role_vi").notNull(),
+  roleEn: text("role_en").notNull(),
+  contentVi: text("content_vi").notNull(),
+  contentEn: text("content_en").notNull(),
+  rating: integer("rating").notNull().default(5),
+  avatarUrl: text("avatar_url"),
+  isShowcased: boolean("is_showcased").default(true),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+});
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type Testimonial = typeof testimonials.$inferSelect;
+
 // Dashboard stats
 export interface DashboardStats {
   totalRevenue: number;

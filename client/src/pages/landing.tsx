@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Flower2, Truck, ShieldCheck, HeadphonesIcon, Star, ArrowRight, Phone, Mail, MapPin, ChevronLeft, ChevronRight, Play, Pause, X, ShoppingCart, Palette, Volume2, VolumeX, Maximize2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/public-header";
 import { useApp } from "@/context/AppContext";
 import { t, formatCurrency } from "@/lib/i18n";
-import type { PremadePot } from "@shared/schema";
+import type { PremadePot, Testimonial } from "@shared/schema";
 
 const features = [
   { icon: Flower2, titleKey: "landing.feature1Title", descKey: "landing.feature1Desc" },
@@ -18,35 +19,6 @@ const features = [
   { icon: HeadphonesIcon, titleKey: "landing.feature4Title", descKey: "landing.feature4Desc" },
 ];
 
-const testimonials = [
-  {
-    name: "Nguyễn Văn A",
-    role: { vi: "Khách hàng VIP", en: "VIP Customer" },
-    content: {
-      vi: "Lan rất đẹp, chất lượng tuyệt vời. Tôi đã đặt nhiều lần và luôn hài lòng!",
-      en: "Beautiful orchids, excellent quality. I've ordered many times and always satisfied!",
-    },
-    rating: 5,
-  },
-  {
-    name: "Trần Thị B",
-    role: { vi: "Nhà thiết kế nội thất", en: "Interior Designer" },
-    content: {
-      vi: "Dịch vụ chuyên nghiệp, giao hàng đúng hẹn. Lan tươi và đẹp như mô tả.",
-      en: "Professional service, on-time delivery. Fresh and beautiful orchids as described.",
-    },
-    rating: 5,
-  },
-  {
-    name: "Lê Văn C",
-    role: { vi: "Chủ văn phòng", en: "Office Owner" },
-    content: {
-      vi: "Đã mua nhiều chậu lan để trang trí văn phòng. Nhân viên tư vấn nhiệt tình.",
-      en: "Bought many pots to decorate the office. Staff provides enthusiastic consultation.",
-    },
-    rating: 5,
-  },
-];
 
 function MediaLightbox({ mediaSrc, mediaType, pot, language, onClose }: { mediaSrc: string; mediaType: "video" | "photo"; pot: PremadePot; language: string; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -365,8 +337,23 @@ function ProductShowcase({ language }: { language: string }) {
 export default function LandingPage() {
   const { language } = useApp();
 
+  const { data: testimonialsList = [] } = useQuery<Testimonial[]>({
+    queryKey: ["/api/testimonials"],
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>{language === "vi" ? "Vườn Lan Hùng Cường - Lan Hồ Điệp Cao Cấp Hưng Yên" : "Hung Cuong Orchid Garden - Premium Phalaenopsis Orchids"}</title>
+        <meta name="description" content={language === "vi"
+          ? "Chuyên cung cấp lan hồ điệp cao cấp, thiết kế chậu lan nghệ thuật tại Hưng Yên. Giao hàng toàn quốc, tư vấn chăm sóc miễn phí."
+          : "Premium Phalaenopsis orchid arrangements in Hung Yen, Vietnam. Nationwide delivery, free care consultation."} />
+        <meta property="og:title" content={language === "vi" ? "Vườn Lan Hùng Cường" : "Hung Cuong Orchid Garden"} />
+        <meta property="og:description" content={language === "vi"
+          ? "Chuyên cung cấp lan hồ điệp cao cấp, thiết kế chậu lan nghệ thuật tại Hưng Yên."
+          : "Premium Phalaenopsis orchid arrangements in Hung Yen, Vietnam."} />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <PublicHeader />
 
       <section className="bg-gradient-to-b from-orchid-50 to-background dark:from-orchid-900/10 dark:to-background" data-testid="section-center-actions">
@@ -516,44 +503,46 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 bg-card/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">
-              {t("landing.testimonialsTitle", language)}
-            </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="hover-elevate">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex gap-1">
-                    {Array.from({ length: testimonial.rating }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground italic">
-                    "{testimonial.content[language]}"
-                  </p>
-                  <div className="flex items-center gap-3 pt-2">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="font-semibold text-primary text-sm">
-                        {testimonial.name.charAt(0)}
-                      </span>
+      {testimonialsList.length > 0 && (
+        <section className="py-16 md:py-20 bg-card/50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">
+                {t("landing.testimonialsTitle", language)}
+              </h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {testimonialsList.map((testimonial) => (
+                <Card key={testimonial.id} className="hover-elevate" data-testid={`card-testimonial-${testimonial.id}`}>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex gap-1">
+                      {Array.from({ length: testimonial.rating }).map((_, i) => (
+                        <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      ))}
                     </div>
-                    <div>
-                      <div className="font-medium text-sm">{testimonial.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {testimonial.role[language]}
+                    <p className="text-muted-foreground italic" data-testid={`text-testimonial-content-${testimonial.id}`}>
+                      "{language === "vi" ? testimonial.contentVi : testimonial.contentEn}"
+                    </p>
+                    <div className="flex items-center gap-3 pt-2">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="font-semibold text-primary text-sm">
+                          {testimonial.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm" data-testid={`text-testimonial-name-${testimonial.id}`}>{testimonial.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {language === "vi" ? testimonial.roleVi : testimonial.roleEn}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="py-16 md:py-20 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
         <div className="container mx-auto px-4">
@@ -607,7 +596,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="py-8 border-t bg-background">
+      <footer className="py-8 pb-20 md:pb-8 border-t bg-background">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-4">
             <p className="text-sm text-muted-foreground">
@@ -617,6 +606,21 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-3 md:hidden z-50 flex gap-2" data-testid="mobile-sticky-bar">
+        <a href="tel:0983270995" className="flex-1">
+          <Button variant="outline" className="w-full gap-2" data-testid="button-call-now">
+            <Phone className="h-4 w-4" />
+            {language === "vi" ? "Gọi Ngay" : "Call Now"}
+          </Button>
+        </a>
+        <Link href="/shop" className="flex-1">
+          <Button className="w-full gap-2" data-testid="button-order-now">
+            <ShoppingCart className="h-4 w-4" />
+            {language === "vi" ? "Đặt Lan" : "Order Now"}
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }

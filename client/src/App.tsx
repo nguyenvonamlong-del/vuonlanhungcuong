@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
@@ -66,15 +67,17 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AppProvider>
-          <ChatbotProvider>
-            <Toaster />
-            <Router />
-            <Chatbot />
-          </ChatbotProvider>
-        </AppProvider>
-      </TooltipProvider>
+      <HelmetProvider>
+        <TooltipProvider>
+          <AppProvider>
+            <ChatbotProvider>
+              <Toaster />
+              <Router />
+              <Chatbot />
+            </ChatbotProvider>
+          </AppProvider>
+        </TooltipProvider>
+      </HelmetProvider>
     </QueryClientProvider>
   );
 }

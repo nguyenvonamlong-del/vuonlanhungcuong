@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { Search, Filter, SlidersHorizontal, Flower2, ShoppingCart, Star, X, ChevronLeft, ChevronRight, Play, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -430,6 +431,12 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>{language === "vi" ? "Cửa Hàng Lan - Vườn Lan Hùng Cường" : "Orchid Shop - Hung Cuong Orchid Garden"}</title>
+        <meta name="description" content={language === "vi"
+          ? "Mua lan hồ điệp cao cấp trực tuyến. Chậu lan nghệ thuật thiết kế sẵn, giao hàng toàn quốc."
+          : "Buy premium Phalaenopsis orchids online. Pre-designed artistic orchid arrangements with nationwide delivery."} />
+      </Helmet>
       <PublicHeader />
 
       <div className="container mx-auto px-4 py-8 flex-1">

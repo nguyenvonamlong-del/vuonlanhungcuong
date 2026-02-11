@@ -1,0 +1,154 @@
+Since you are using Replit, your workflow relies on the **Shell** (for installing packages/database updates) and the **Editor** (for code changes).
+
+Here are the specific Replit commands and code snippets to implement the suggestions.
+
+### 1. Fix SEO (Add Dynamic Titles)
+
+Replit projects are Single Page Apps (SPAs), so you need a library to manage the `<head>` of your HTML document dynamically.
+
+**Step 1: Install the package**
+Open the **Shell** tab in Replit and run:
+
+```bash
+npm install react-helmet-async
+
+```
+
+**Step 2: Setup the Provider**
+Open `client/src/App.tsx` and wrap your app with `HelmetProvider`.
+
+```tsx
+// Add this import
+import { HelmetProvider } from "react-helmet-async";
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider> {/* <--- Add this wrapper */}
+        <TooltipProvider>
+           {/* ... existing code ... */}
+        </TooltipProvider>
+      </HelmetProvider>
+    </QueryClientProvider>
+  );
+}
+
+```
+
+**Step 3: Add Tags to Pages**
+Open `client/src/pages/landing.tsx` and add SEO tags at the top of the component:
+
+```tsx
+import { Helmet } from "react-helmet-async";
+
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen...">
+      <Helmet>
+        <title>Vườn Lan Hùng Cường - Orchid Garden Hung Yen</title>
+        <meta name="description" content="Chuyên cung cấp lan hồ điệp cao cấp, thiết kế chậu lan nghệ thuật tại Hưng Yên." />
+      </Helmet>
+      {/* ... rest of your code ... */}
+    </div>
+  );
+}
+
+```
+
+---
+
+### 2. Move Testimonials to Database
+
+Currently, your testimonials are hardcoded in `landing.tsx`. Let's move them to the database so you can edit them without coding.
+
+**Step 1: Update Schema**
+Open `shared/schema.ts` and add this table definition:
+
+```typescript
+// Add this to shared/schema.ts
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  roleVi: text("role_vi").notNull(),
+  roleEn: text("role_en").notNull(),
+  contentVi: text("content_vi").notNull(),
+  contentEn: text("content_en").notNull(),
+  rating: integer("rating").notNull().default(5),
+  avatarUrl: text("avatar_url"),
+  isShowcased: boolean("is_showcased").default(true),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials);
+export type Testimonial = typeof testimonials.$inferSelect;
+
+```
+
+**Step 2: Push changes to Database**
+In the **Shell**, run the command defined in your `package.json` to update your Neon database:
+
+```bash
+npm run db:push
+
+```
+
+---
+
+### 3. Improve Mobile Experience (Sticky Buy Button)
+
+Orchid buyers on mobile often want to "Call" or "Buy" immediately.
+
+**Step 1: Edit Landing Page**
+Open `client/src/pages/landing.tsx` and add this **Sticky Action Bar** at the very bottom of the return statement (inside the main `div`):
+
+```tsx
+{/* Mobile Sticky Action Bar */}
+<div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-3 md:hidden z-50 flex gap-2">
+  <a href="tel:0983270995" className="flex-1">
+    <Button variant="outline" className="w-full gap-2 border-primary text-primary">
+      <Phone className="h-4 w-4" />
+      Gọi Ngay
+    </Button>
+  </a>
+  <Link href="/shop" className="flex-1">
+    <Button className="w-full gap-2">
+      <ShoppingCart className="h-4 w-4" />
+      Đặt Lan
+    </Button>
+  </Link>
+</div>
+
+```
+
+---
+
+### 4. Train the Chatbot
+
+To make the chatbot an expert on "Orchid Care," you need to modify the "System Prompt" (the hidden instructions given to the AI).
+
+**Step 1: Locate the prompt**
+Open `server/chatbot.ts` (or wherever your `openai.chat.completions.create` call is).
+
+**Step 2: Update the System Message**
+Find the `messages` array and update the `system` content:
+
+```typescript
+// Inside server/chatbot.ts
+const systemPrompt = `
+You are the AI assistant for Vườn Lan Hùng Cường (Hung Cuong Orchid Garden).
+Your Tone: Polite, knowledgeable, helpful, and distinctly Vietnamese in style.
+
+KEY KNOWLEDGE:
+1. Watering: Advice users to water only when the moss is dry (usually every 7-10 days). Never water the leaves directly to avoid rot.
+2. Light: Orchids need bright, indirect sunlight. Avoid harsh midday sun.
+3. Products: If a user has a sick plant, recommend our "Orchid Care Kit" (if available) or suggest bringing it to the garden for inspection.
+
+If you don't know the answer, ask them to call the owner at 0983 270 995.
+`;
+
+```
+
+### Summary of Commands to Run
+
+1. `npm install react-helmet-async` (Installs SEO library)
+2. `npm run db:push` (Updates database after you edit `schema.ts`)
+3. `npm run dev` (Restart the server to see changes)

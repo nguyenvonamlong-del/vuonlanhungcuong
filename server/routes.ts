@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
-import { insertCatalogItemSchema, insertPremadePotSchema, insertTechnicianSchema, insertOrderSchema, insertCustomerSchema, insertShippingTypeSchema, insertUserSchema } from "@shared/schema";
+import { insertCatalogItemSchema, insertPremadePotSchema, insertTechnicianSchema, insertOrderSchema, insertCustomerSchema, insertShippingTypeSchema, insertUserSchema, insertTestimonialSchema } from "@shared/schema";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
@@ -344,6 +344,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pots" });
+    }
+  });
+
+  app.get("/api/testimonials", async (req, res) => {
+    try {
+      const items = await storage.getShowcasedTestimonials();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch testimonials" });
     }
   });
 
