@@ -100,7 +100,9 @@ export default function TrackingPage() {
 
   const { data: trackingPaymentSummary } = useQuery<{
     depositPaid: boolean;
+    depositPending: boolean;
     remainingPaid: boolean;
+    remainingPending: boolean;
   }>({
     queryKey: ["/api/payments/order", displayOrder?.id, "summary"],
     queryFn: async () => {
@@ -434,11 +436,15 @@ export default function TrackingPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-semibold">{formatCurrency(displayOrder.depositAmount, language)}</span>
                           {(trackingPaymentSummary?.depositPaid ?? displayOrder.depositPaid) ? (
-                            <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
+                            <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600" data-testid="status-deposit-paid">
                               {language === "vi" ? "Đã thanh toán" : "Paid"}
                             </span>
+                          ) : trackingPaymentSummary?.depositPending ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600" data-testid="status-deposit-pending">
+                              {language === "vi" ? "Đang xác minh" : "Pending verification"}
+                            </span>
                           ) : (
-                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600">
+                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600" data-testid="status-deposit-unpaid">
                               {language === "vi" ? "Chưa thanh toán" : "Unpaid"}
                             </span>
                           )}
@@ -449,11 +455,15 @@ export default function TrackingPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-semibold">{formatCurrency(displayOrder.remainingAmount, language)}</span>
                           {(trackingPaymentSummary?.remainingPaid ?? displayOrder.remainingPaid) ? (
-                            <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
+                            <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600" data-testid="status-remaining-paid">
                               {language === "vi" ? "Đã thanh toán" : "Paid"}
                             </span>
+                          ) : trackingPaymentSummary?.remainingPending ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600" data-testid="status-remaining-pending">
+                              {language === "vi" ? "Đang xác minh" : "Pending verification"}
+                            </span>
                           ) : (
-                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600">
+                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600" data-testid="status-remaining-unpaid">
                               {language === "vi" ? "Chưa thanh toán" : "Unpaid"}
                             </span>
                           )}

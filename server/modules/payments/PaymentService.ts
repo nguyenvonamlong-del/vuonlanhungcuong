@@ -85,7 +85,9 @@ export class PaymentService {
     totalPending: number;
     hasPendingPayments: boolean;
     depositPaid: boolean;
+    depositPending: boolean;
     remainingPaid: boolean;
+    remainingPending: boolean;
     orderTotal: number;
     depositAmount: number;
     remainingAmount: number;
@@ -108,13 +110,18 @@ export class PaymentService {
     const depositPaid = totalPaid >= depositAmount && depositAmount > 0;
     const remainingPaid = totalPaid >= orderTotal && orderTotal > 0;
 
+    const depositPending = !depositPaid && (totalPaid + totalPending) >= depositAmount && depositAmount > 0;
+    const remainingPending = !remainingPaid && (totalPaid + totalPending) >= orderTotal && orderTotal > 0;
+
     return {
       payments,
       totalPaid,
       totalPending,
       hasPendingPayments,
       depositPaid,
+      depositPending,
       remainingPaid,
+      remainingPending,
       orderTotal,
       depositAmount,
       remainingAmount,
