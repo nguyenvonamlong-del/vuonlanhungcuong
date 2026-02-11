@@ -1,4 +1,6 @@
-import { pool } from "./db";
+import { db } from "./db";
+import { sql, inArray } from "drizzle-orm";
+import { catalogItems } from "@shared/schema";
 
 const REQUIRED_CATALOG_ITEMS = [
   {
@@ -192,10 +194,10 @@ const REQUIRED_CATALOG_ITEMS = [
 
 async function ensureExtraColumns(): Promise<void> {
   try {
-    await pool.query(`ALTER TABLE premade_pots ADD COLUMN IF NOT EXISTS total_cost numeric(12, 0)`);
-    await pool.query(`ALTER TABLE pot_types ADD COLUMN IF NOT EXISTS price_max numeric(12, 0)`);
-    await pool.query(`ALTER TABLE decoration_types ADD COLUMN IF NOT EXISTS price_max numeric(12, 0)`);
-    await pool.query(`ALTER TABLE shipping_types ADD COLUMN IF NOT EXISTS base_cost_max numeric(12, 0)`);
+    await db.execute(sql`ALTER TABLE premade_pots ADD COLUMN IF NOT EXISTS total_cost numeric(12, 0)`);
+    await db.execute(sql`ALTER TABLE pot_types ADD COLUMN IF NOT EXISTS price_max numeric(12, 0)`);
+    await db.execute(sql`ALTER TABLE decoration_types ADD COLUMN IF NOT EXISTS price_max numeric(12, 0)`);
+    await db.execute(sql`ALTER TABLE shipping_types ADD COLUMN IF NOT EXISTS base_cost_max numeric(12, 0)`);
   } catch (err) {
     console.error("[sync] Failed to ensure extra columns:", (err as Error).message);
   }
@@ -205,11 +207,11 @@ export async function syncCatalogItems(): Promise<void> {
   await ensureExtraColumns();
   try {
     const ids = REQUIRED_CATALOG_ITEMS.map((item) => item.id);
-    const result = await pool.query(
-      `SELECT id FROM catalog_items WHERE id = ANY($1)`,
-      [ids]
-    );
-    const existingIds = new Set(result.rows.map((r: any) => r.id));
+    const existing = await db
+      .select({ id: catalogItems.id })
+      .from(catalogItems)
+      .where(inArray(catalogItems.id, ids));
+    const existingIds = new Set(existing.map((r) => r.id));
     const missing = REQUIRED_CATALOG_ITEMS.filter((item) => !existingIds.has(item.id));
 
     if (missing.length === 0) {
@@ -218,28 +220,26 @@ export async function syncCatalogItems(): Promise<void> {
     }
 
     for (const item of missing) {
-      await pool.query(
-        `INSERT INTO catalog_items (id, species_name_vi, species_name_en, color, height_cm, price_per_unit, cost_per_unit, stock_quantity, min_order_quantity, description_vi, description_en, status, sku, genus, tags, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
-         ON CONFLICT (id) DO NOTHING`,
-        [
-          item.id,
-          item.species_name_vi,
-          item.species_name_en,
-          item.color,
-          item.height_cm,
-          item.price_per_unit,
-          item.cost_per_unit,
-          item.stock_quantity,
-          item.min_order_quantity,
-          item.description_vi,
-          item.description_en,
-          item.status,
-          item.sku,
-          item.genus,
-          item.tags,
-        ]
-      );
+      await db
+        .insert(catalogItems)
+        .values({
+          id: item.id,
+          speciesNameVi: item.species_name_vi,
+          speciesNameEn: item.species_name_en,
+          color: item.color,
+          heightCm: item.height_cm,
+          pricePerUnit: String(item.price_per_unit),
+          costPerUnit: String(item.cost_per_unit),
+          stockQuantity: item.stock_quantity,
+          minOrderQuantity: item.min_order_quantity,
+          descriptionVi: item.description_vi,
+          descriptionEn: item.description_en,
+          status: item.status,
+          sku: item.sku,
+          genus: item.genus,
+          tags: item.tags,
+        })
+        .onConflictDoNothing({ target: catalogItems.id });
     }
     console.log(`[sync] Inserted ${missing.length} missing catalog items`);
   } catch (err) {
