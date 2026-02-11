@@ -117,7 +117,9 @@ export default function OrdersPage() {
     totalPending: number;
     hasPendingPayments: boolean;
     depositPaid: boolean;
+    depositPending: boolean;
     remainingPaid: boolean;
+    remainingPending: boolean;
     orderTotal: number;
     depositAmount: number;
     remainingAmount: number;
@@ -475,24 +477,72 @@ export default function OrdersPage() {
                 <CardHeader>
                   <CardTitle className="text-base">{language === "vi" ? "Sản phẩm" : "Products"}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   {selectedOrder.pots?.map((pot: any, idx: number) => (
-                    <div key={pot.potId || idx} className="p-3 rounded-lg bg-muted/50">
-                      <p className="font-medium mb-2">{pot.potName}</p>
-                      {pot.orchids?.length > 0 ? (
-                        pot.orchids.map((orchid: any) => (
-                          <div key={orchid.catalogId} className="flex justify-between text-sm pl-3">
-                            <span>{orchid.speciesName} ({orchid.color}) x{orchid.quantity}</span>
-                            <span>{formatCurrency(orchid.subtotal, language)}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-sm text-muted-foreground pl-3">
-                          {formatCurrency(pot.potSubtotal, language)}
+                    <div key={pot.potId || idx} className="p-3 rounded-lg bg-muted/50 space-y-2" data-testid={`pot-detail-${idx}`}>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{pot.potName}</p>
+                        <span className="font-semibold">{formatCurrency(pot.potSubtotal, language)}</span>
+                      </div>
+                      {pot.potTypeName && (
+                        <div className="flex justify-between text-sm pl-4">
+                          <span className="text-muted-foreground">
+                            {language === "vi" ? "Loại chậu" : "Pot Type"}: {pot.potTypeName}
+                          </span>
+                          <span>{formatCurrency(pot.potTypePrice || 0, language)}</span>
+                        </div>
+                      )}
+                      {pot.decorationTypeName && (
+                        <div className="flex justify-between text-sm pl-4">
+                          <span className="text-muted-foreground">
+                            {language === "vi" ? "Trang trí" : "Decoration"}: {pot.decorationTypeName}
+                          </span>
+                          <span>{formatCurrency(pot.decorationTypePrice || 0, language)}</span>
+                        </div>
+                      )}
+                      {pot.orchids?.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground pl-4">
+                            {language === "vi" ? "Lan" : "Orchids"}:
+                          </p>
+                          {pot.orchids.map((orchid: any, oi: number) => (
+                            <div key={orchid.catalogId || oi} className="flex justify-between text-sm pl-4">
+                              <span>{orchid.speciesName} {orchid.color ? `(${orchid.color})` : ""} x{orchid.quantity}</span>
+                              <span>{formatCurrency(orchid.subtotal || orchid.quantity * orchid.pricePerUnit, language)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {(!pot.orchids || pot.orchids.length === 0) && !pot.potTypeName && (
+                        <div className="text-sm text-muted-foreground pl-4">
+                          {language === "vi" ? "Chậu lan có sẵn" : "Pre-made orchid pot"}
                         </div>
                       )}
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("checkout.subtotal", language)}</span>
+                    <span>{formatCurrency(selectedOrder.subtotal, language)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("checkout.shipping", language)}</span>
+                    <span>{formatCurrency(selectedOrder.shippingCost, language)}</span>
+                  </div>
+                  {selectedOrder.taxAmount && Number(selectedOrder.taxAmount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{language === "vi" ? "Thuế" : "Tax"}</span>
+                      <span>{formatCurrency(selectedOrder.taxAmount, language)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+                    <span>{t("checkout.total", language)}</span>
+                    <span className="text-primary">{formatCurrency(selectedOrder.totalAmount, language)}</span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -504,6 +554,10 @@ export default function OrdersPage() {
                     {(paymentSummary?.depositPaid ?? selectedOrder.depositPaid) ? (
                       <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
                         {language === "vi" ? "Đã thanh toán" : "Paid"}
+                      </span>
+                    ) : paymentSummary?.depositPending ? (
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600">
+                        {language === "vi" ? "Đang xác minh" : "Pending verification"}
                       </span>
                     ) : (
                       <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600">
@@ -520,19 +574,16 @@ export default function OrdersPage() {
                       <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
                         {language === "vi" ? "Đã thanh toán" : "Paid"}
                       </span>
+                    ) : paymentSummary?.remainingPending ? (
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600">
+                        {language === "vi" ? "Đang xác minh" : "Pending verification"}
+                      </span>
                     ) : (
                       <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600">
                         {language === "vi" ? "Chưa thanh toán" : "Unpaid"}
                       </span>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>{t("checkout.total", language)}</span>
-                  <span className="text-primary">{formatCurrency(selectedOrder.totalAmount, language)}</span>
                 </div>
               </div>
             </div>
