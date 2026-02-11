@@ -18,6 +18,11 @@ import {
   notifications,
   priorityTypes,
   notificationChannels,
+  payments,
+  inventoryItems,
+  inventoryTransactions,
+  outboundShipments,
+  inboundShipments,
   type User,
   type InsertUser,
   type CatalogItem,
@@ -52,6 +57,16 @@ import {
   type InsertPriorityType,
   type NotificationChannel,
   type InsertNotificationChannel,
+  type Payment,
+  type InsertPayment,
+  type InventoryItem,
+  type InsertInventoryItem,
+  type InventoryTransaction,
+  type InsertInventoryTransaction,
+  type OutboundShipment,
+  type InsertOutboundShipment,
+  type InboundShipment,
+  type InsertInboundShipment,
 } from "@shared/schema";
 import { v4 as uuidv4 } from "uuid";
 
@@ -179,6 +194,36 @@ export interface IStorage {
   createNotificationChannel(channel: InsertNotificationChannel): Promise<NotificationChannel>;
   updateNotificationChannel(id: string, channel: Partial<InsertNotificationChannel>): Promise<NotificationChannel | undefined>;
   deleteNotificationChannel(id: string): Promise<void>;
+
+  // Payments
+  getPaymentsByOrderId(orderId: string): Promise<Payment[]>;
+  getPaymentById(id: string): Promise<Payment | undefined>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  updatePayment(id: string, payment: Partial<InsertPayment>): Promise<Payment | undefined>;
+
+  // Inventory Items
+  getInventoryItems(): Promise<InventoryItem[]>;
+  getInventoryItemByTypeAndId(itemType: string, itemId: string): Promise<InventoryItem | undefined>;
+  createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
+  updateInventoryItem(id: string, item: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined>;
+
+  // Inventory Transactions
+  getInventoryTransactions(itemType?: string, itemId?: string): Promise<InventoryTransaction[]>;
+  createInventoryTransaction(transaction: InsertInventoryTransaction): Promise<InventoryTransaction>;
+
+  // Outbound Shipments
+  getOutboundShipments(): Promise<OutboundShipment[]>;
+  getOutboundShipmentsByOrderId(orderId: string): Promise<OutboundShipment[]>;
+  getOutboundShipmentById(id: string): Promise<OutboundShipment | undefined>;
+  createOutboundShipment(shipment: InsertOutboundShipment): Promise<OutboundShipment>;
+  updateOutboundShipment(id: string, shipment: Partial<InsertOutboundShipment>): Promise<OutboundShipment | undefined>;
+
+  // Inbound Shipments
+  getInboundShipments(): Promise<InboundShipment[]>;
+  getInboundShipmentsByPurchaseOrderId(purchaseOrderId: string): Promise<InboundShipment[]>;
+  getInboundShipmentById(id: string): Promise<InboundShipment | undefined>;
+  createInboundShipment(shipment: InsertInboundShipment): Promise<InboundShipment>;
+  updateInboundShipment(id: string, shipment: Partial<InsertInboundShipment>): Promise<InboundShipment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -712,6 +757,109 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNotificationChannel(id: string): Promise<void> {
     await db.delete(notificationChannels).where(eq(notificationChannels.id, id));
+  }
+
+  // Payments
+  async getPaymentsByOrderId(orderId: string): Promise<Payment[]> {
+    return db.select().from(payments).where(eq(payments.orderId, orderId)).orderBy(desc(payments.createdAt));
+  }
+
+  async getPaymentById(id: string): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
+  }
+
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const [created] = await db.insert(payments).values({ ...payment, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updatePayment(id: string, payment: Partial<InsertPayment>): Promise<Payment | undefined> {
+    const [updated] = await db.update(payments).set(payment).where(eq(payments.id, id)).returning();
+    return updated;
+  }
+
+  // Inventory Items
+  async getInventoryItems(): Promise<InventoryItem[]> {
+    return db.select().from(inventoryItems).orderBy(desc(inventoryItems.createdAt));
+  }
+
+  async getInventoryItemByTypeAndId(itemType: string, itemId: string): Promise<InventoryItem | undefined> {
+    const [item] = await db.select().from(inventoryItems).where(and(eq(inventoryItems.itemType, itemType), eq(inventoryItems.itemId, itemId)));
+    return item;
+  }
+
+  async createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem> {
+    const [created] = await db.insert(inventoryItems).values({ ...item, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateInventoryItem(id: string, item: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined> {
+    const [updated] = await db.update(inventoryItems).set({ ...item, updatedAt: new Date() }).where(eq(inventoryItems.id, id)).returning();
+    return updated;
+  }
+
+  // Inventory Transactions
+  async getInventoryTransactions(itemType?: string, itemId?: string): Promise<InventoryTransaction[]> {
+    if (itemType && itemId) {
+      return db.select().from(inventoryTransactions)
+        .where(and(eq(inventoryTransactions.itemType, itemType), eq(inventoryTransactions.itemId, itemId)))
+        .orderBy(desc(inventoryTransactions.createdAt));
+    }
+    return db.select().from(inventoryTransactions).orderBy(desc(inventoryTransactions.createdAt));
+  }
+
+  async createInventoryTransaction(transaction: InsertInventoryTransaction): Promise<InventoryTransaction> {
+    const [created] = await db.insert(inventoryTransactions).values({ ...transaction, id: uuidv4() }).returning();
+    return created;
+  }
+
+  // Outbound Shipments
+  async getOutboundShipments(): Promise<OutboundShipment[]> {
+    return db.select().from(outboundShipments).orderBy(desc(outboundShipments.createdAt));
+  }
+
+  async getOutboundShipmentsByOrderId(orderId: string): Promise<OutboundShipment[]> {
+    return db.select().from(outboundShipments).where(eq(outboundShipments.orderId, orderId)).orderBy(desc(outboundShipments.createdAt));
+  }
+
+  async getOutboundShipmentById(id: string): Promise<OutboundShipment | undefined> {
+    const [shipment] = await db.select().from(outboundShipments).where(eq(outboundShipments.id, id));
+    return shipment;
+  }
+
+  async createOutboundShipment(shipment: InsertOutboundShipment): Promise<OutboundShipment> {
+    const [created] = await db.insert(outboundShipments).values({ ...shipment, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateOutboundShipment(id: string, shipment: Partial<InsertOutboundShipment>): Promise<OutboundShipment | undefined> {
+    const [updated] = await db.update(outboundShipments).set({ ...shipment, updatedAt: new Date() }).where(eq(outboundShipments.id, id)).returning();
+    return updated;
+  }
+
+  // Inbound Shipments
+  async getInboundShipments(): Promise<InboundShipment[]> {
+    return db.select().from(inboundShipments).orderBy(desc(inboundShipments.createdAt));
+  }
+
+  async getInboundShipmentsByPurchaseOrderId(purchaseOrderId: string): Promise<InboundShipment[]> {
+    return db.select().from(inboundShipments).where(eq(inboundShipments.purchaseOrderId, purchaseOrderId)).orderBy(desc(inboundShipments.createdAt));
+  }
+
+  async getInboundShipmentById(id: string): Promise<InboundShipment | undefined> {
+    const [shipment] = await db.select().from(inboundShipments).where(eq(inboundShipments.id, id));
+    return shipment;
+  }
+
+  async createInboundShipment(shipment: InsertInboundShipment): Promise<InboundShipment> {
+    const [created] = await db.insert(inboundShipments).values({ ...shipment, id: uuidv4() }).returning();
+    return created;
+  }
+
+  async updateInboundShipment(id: string, shipment: Partial<InsertInboundShipment>): Promise<InboundShipment | undefined> {
+    const [updated] = await db.update(inboundShipments).set({ ...shipment, updatedAt: new Date() }).where(eq(inboundShipments.id, id)).returning();
+    return updated;
   }
 }
 

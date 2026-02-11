@@ -1,224 +1,46 @@
 # Orchid Sales Web Application
 
-## Project Overview
-A comprehensive orchid sales web application with multi-language support (Vietnamese/English), featuring a public-facing shop, custom order composition builder, VietQR payment integration, and a complete admin panel.
-
-## Recent Changes
-- **2026-02-09**: Dropdown Sorting & Flexible Pricing:
-  - **Dropdown sorting**: All data-driven dropdowns throughout the app now sort values in ascending alphabetical order
-  - **Price range support**: Pot types, decoration types, and shipping types now support either fixed price or price range (min-max)
-  - Added `priceMax` column to pot_types and decoration_types, `baseCostMax` to shipping_types
-  - Admin catalog form shows "Price (or min price)" + "Max price (leave empty for fixed price)" fields
-  - Price ranges displayed as "100,000₫ - 200,000₫" format; fixed prices shown normally
-  - Helper function `formatPriceRange()` in i18n for consistent display
-  - Sync-catalog.ts ensures new columns exist in production on startup
-
-- **2026-02-09**: Admin & Landing Page Enhancements:
-  - **Bulk Inline Editing**: New "Bulk Edit" mode on Premade Pots page shows grid of cards with media preview + inline editable fields (name, orchid type, quantity, decoration, pot type) with per-card save
-  - **Video Lightbox**: Featured Products on landing page now opens a full-screen lightbox overlay when video is played - enlarged view with no auto-loop
-  - **Video Sound**: Lightbox video plays with sound enabled by default, with mute/unmute toggle
-  - **Play/Pause Controls**: Lightbox supports play/pause via click or spacebar, close via X button or Escape key
-
-- **2026-02-08**: Scaling for 1000+ Concurrent Users:
-  - **Database indexes**: 39 indexes added across all tables for status filters, foreign keys, timestamps, phone/email lookups
-  - **Redis-backed cache**: Dual-layer cache (in-memory + Upstash Redis) with graceful fallback if Redis unavailable
-  - **Rate limiting**: Three tiers - API (200/min), auth (20/15min), orders (10/min) per IP
-  - **Database pool**: 20 max connections with idle/connection timeouts
-  - **Response compression**: gzip/deflate compression middleware (~62% payload reduction)
-  - Cache layer: `server/cache.ts` with configurable TTLs (SHORT=30s, MEDIUM=120s, LONG=300s)
-  - Required secrets: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (optional, falls back to in-memory)
-
-- **2026-02-08**: Landing Page & Admin Enhancements:
-  - **Product Showcase on Landing**: Horizontal scrollable carousel of premade products with media thumbnails (video priority) displayed right below hero CTA buttons
-  - **Bulk Video Upload**: Admin can bulk-upload multiple videos at once from Premade Pots page; each video creates an INACTIVE placeholder pot entry for later editing
-  - **Production Login Fix**: Added trust proxy and sameSite cookie config to fix session issues behind reverse proxy
-  - **Video-first thumbnails**: Shop product cards now prioritize video over photo as thumbnail
-
-- **2026-02-08**: Pre-made Pots Enhancement:
-  - **Multi-media support**: Each pre-made pot now supports multiple photos AND multiple videos upload via object storage
-  - **Auto-tagging system**: Tags are automatically generated from selected orchid types (orchidComposition), decoration types, and pot type using canonical format (orchid:{id}, decoration:{id}, pot:{id})
-  - **Manual tag editing**: Admin can manually add/remove tags, plus "Regenerate" button to rebuild from current composition
-  - **Orchid composition with quantities**: Admin can add multiple orchid types with individual quantities (+/- controls)
-  - **Tags column in table**: Pre-made pots table shows tag badges with resolved names
-  - **Reference gallery in Create Pot**: When public customers select pot type, decoration, or orchid type during custom pot creation, matching pre-made pots appear as reference gallery with photos/videos and "View & Purchase" link
-  - **On-read tag enrichment**: Existing premade pots without tags get auto-generated tags on API read
-  - Database: Added `videos` (text[]) and `tags` (text[]) columns to premade_pots table
-
-- **2026-02-04**: Notification Services Integration (admin-only):
-  - **Notification Channels CRUD**: Full management for notification channels (Email, SMS, Voicemail, Zalo)
-    - Add/Edit/Delete channels with bilingual names and descriptions
-    - Status toggle (Active/Inactive) per channel
-    - Type-specific icons (Mail, Phone, MessageSquare)
-  - **API Credentials Management**: Settings page now includes API credentials section for:
-    - **Plivo** (SMS + Voicemail): Auth ID and Auth Token fields
-    - **Zoho ZeptoMail** (Email): Send Mail Token field (10,000 free emails/month)
-    - **Zalo Official Account**: App ID and Secret Key fields
-  - Password masking with visibility toggle for sensitive credentials
-  - "Configured" badge indicator when credentials are saved
-  - Settings stored securely in database with upsert logic
-
-- **2026-02-04**: Users Management system (admin-only):
-  - Full CRUD operations for staff accounts with username, password, full name, email, role
-  - Enable/Disable toggle for user accounts (status: ACTIVE/INACTIVE)
-  - Role management: ADMIN, MANAGER, EMPLOYEE with dropdown selection
-  - Statistics dashboard: total users, active users, admins, managers
-  - Search by username/name and filter by role/status
-  - Schema-driven validation with z.enum for role and status
-  - Technician-User association: technicians can be linked to user accounts via userId field
-  - Admin-only access restriction (non-admins get 403 error)
-
-- **2026-02-04**: Enhanced admin panel with comprehensive management features:
-  - **Inventory Management**: Stock level tracking with low/critical alerts, adjustment dialog with increment/decrement controls, summary cards for orchids and premade pots
-  - **Purchase Orders**: Full CRUD with supplier selection, dynamic item management, status workflow (Pending→Confirmed→Shipped→Received), payment tracking
-  - **Customers Page Enhanced**: Add/Update/Block functionality, customer type filtering (VIP/Registered/Guest), statistics cards (total customers, VIP, registered, avg spent)
-  - **Technicians Page Enhanced**: Availability badges (Available/Near Full/Busy based on workload), statistics cards, status filtering
-  - **Notifications Page**: Full notification management with status/type filtering, mark as read, delete functionality, statistics cards
-  - **Reports Section**: Comprehensive reports with 5 tabs (Sales, Orders, Customers, Technicians, Suppliers) with relevant metrics, charts, and data tables
-  - Database: Added isBlocked field to customers table
-
-- **2026-02-04**: Admin panel expansion:
-  - Added Suppliers management page with full CRUD operations, contact tracking, type categorization, and rating system
-  - Added Audit Log page (read-only) showing all system activities with auto-refresh every 30 seconds
-  - Restructured Catalog page into 5 tabs: Orchid, Pot, Decoration, Shipping, Payment types
-  - Extended sidebar navigation with new pages under Management and Admin sections
-  - Database schema expanded with tables: suppliers, purchase_orders, notifications, payment_types
-
-- **2026-02-04**: AI Chatbot feature:
-  - Added floating chatbot button on all pages (bottom-right corner)
-  - Customer chatbot: helps with product inquiries, ordering info, and order tracking
-  - Admin chatbot: provides real-time business insights (inventory, orders, revenue, technicians)
-  - Uses OpenAI via Replit AI Integrations for natural language responses
-  - Streaming responses for real-time chat experience
-  - Role-based access: Customers see customer assistant, logged-in admins see business assistant
-
-- **2026-02-04**: Business information updates:
-  - English name: "Hùng Cường Orchid Garden"
-  - Address: Đội 10, Xích Đằng, phường Lam Sơn, TP. Hưng Yên, tỉnh Hưng Yên
-  - Phone: 0983 270 995
-  - Email: Thanhtusky147@gmail.com
-  - Payment: VIETCOMBANK account 9983270995 (LE THI THANH TU)
-  - Static QR code image for payment (client/public/assets/vietcombank-qr.png)
-
-- **2026-02-04**: Pot composition enhancements:
-  - Added pot type selection per pot (e.g., ceramic, terracotta, cement pots)
-  - Added decoration type selection per pot (e.g., pebbles, moss, bark chips)
-  - Default orchid quantity is now 5 stems (minimum requirement)
-  - Added visible info alert about minimum 5 stems requirement
-  - Pot type and decoration type prices are included in subtotal calculation
-
-- **2026-02-04**: Payment proof upload feature:
-  - Added file upload button for payment proof images (replaces URL input)
-  - Uses Replit Object Storage for secure file uploads
-  - Customers can upload images directly from their device
-  - Preview of uploaded image shown before order submission
-
-- **2026-02-04**: Order tracking and form improvements:
-  - Added order tracking by phone number or email (shows active orders only)
-  - District field is now optional in checkout form
-  - Fixed product card layout on shop page (buttons no longer cut off)
-  - Address display gracefully handles missing district field
-  
-- **2026-02-04**: Tax system and payment proof features:
-  - Added configurable tax system with admin toggle and percentage (0-100%)
-  - Tax calculated on (subtotal + shipping cost) when enabled
-  - Settings management page for admin users (/dashboard/settings)
-  - Payment proof URL required before order placement (customer uploads to imgur or similar)
-  - Server-side validation for payment proof and tax calculation to prevent tampering
-  - Settings API with admin-only write access and value validation
-  
-- **2024-02-04**: Complete MVP implementation including:
-  - Full PostgreSQL database schema with all entities
-  - Multi-language support (Vietnamese/English) throughout
-  - Public pages: Landing, Shop, Checkout, Order Tracking
-  - Staff authentication with demo accounts
-  - Admin dashboard with statistics and charts
-  - Management pages for Catalog, Orders, Customers, Technicians, Pre-made Pots
-  - VietQR payment integration with 50% deposit workflow
-
-## Architecture
-
-### Tech Stack
-- **Frontend**: React + TypeScript + Vite
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: TailwindCSS + shadcn/ui components
-- **State Management**: React Context + TanStack Query
-
-### Project Structure
-```
-├── client/
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── context/        # React Context providers
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── lib/            # Utilities and configurations
-│   │   ├── pages/          # Page components
-│   │   │   └── dashboard/  # Admin dashboard pages
-│   │   └── App.tsx         # Main app router
-├── server/
-│   ├── db.ts               # Database connection
-│   ├── routes.ts           # API routes
-│   ├── storage.ts          # Database operations
-│   └── seed.ts             # Seed data script
-├── shared/
-│   └── schema.ts           # Database schema and types
-```
-
-### Key Features
-
-#### Public Features
-- **Landing Page**: Hero section, features, testimonials, CTA
-- **Shop**: Browse pre-made orchid pots with filtering/sorting
-- **Checkout**: 5-step process with composition builder or cart checkout
-- **Order Tracking**: Track orders by token, phone number, or email
-
-#### Staff Features
-- **Dashboard**: Revenue charts, order statistics, recent orders
-- **Catalog Management**: CRUD for orchid species
-- **Order Management**: Status updates, technician assignment, payments
-- **Customer Management**: View customer details and history
-- **Technician Management**: Workload tracking and assignments
-- **Pre-made Pots**: Manage inventory for ready-made products
-
-### Demo Accounts
-- **Admin**: username=`admin`, password=`admin123`
-- **Manager**: username=`manager`, password=`manager123`
-- **Employee**: username=`employee`, password=`employee123`
-
-### API Routes
-- `POST /api/auth/login` - Staff authentication
-- `GET /api/catalog` - List catalog items
-- `GET /api/shop/pots` - Public shop products
-- `POST /api/orders` - Create new order (requires paymentProofUrl for website orders)
-- `GET /api/orders/track/:token` - Track order by token
-- `GET /api/dashboard/stats` - Dashboard statistics
-- `GET /api/settings` - Get all settings (public)
-- `PUT /api/settings/:key` - Update setting (admin only, validates key/value)
-
-### Database Schema
-- **users**: Staff accounts with roles (ADMIN, MANAGER, EMPLOYEE)
-- **catalogItems**: Orchid species catalog
-- **premadePots**: Pre-made pot products
-- **customers**: Customer information
-- **technicians**: Technician assignments
-- **orders**: Order records with pots/orchids JSON, taxAmount, paymentProofUrl
-- **shippingTypes**: Shipping options
-- **activities**: Activity log
-- **settings**: System settings (tax_enabled, tax_percentage)
-
-### Running the Project
-```bash
-npm run dev          # Start development server
-npm run db:push      # Push schema to database
-npx tsx server/seed.ts  # Seed database
-```
+## Overview
+This project is an orchid sales web application designed to support multi-language (Vietnamese/English) online retail. It features a public-facing e-commerce shop, a unique custom order composition builder for personalized orchid arrangements, and integrated VietQR payment processing. A comprehensive admin panel facilitates efficient management of sales, inventory, customer relations, and system configurations. The application aims to streamline the orchid sales process, from customer interaction and order placement to fulfillment and inventory management, targeting both individual customers and business operations within the orchid market.
 
 ## User Preferences
 - Default language: Vietnamese
 - Theme: Light/Dark mode toggle available
 - Currency format: VND (Vietnamese Dong)
 
-## Notes
-- Passwords are stored in plaintext for demo purposes only
-- Session management uses express-session with PostgreSQL store
-- VietQR QR codes are generated dynamically for payments
+## System Architecture
+The application is built with a modern web stack, utilizing **React + TypeScript + Vite** for the frontend, **Express.js + TypeScript** for the backend, and **PostgreSQL with Drizzle ORM** for database management. Styling is handled with **TailwindCSS** and **shadcn/ui** components. State management on the frontend employs **React Context** and **TanStack Query**.
+
+**Core Architectural Decisions:**
+- **Separated Concerns & Domain Services**: The backend is structured into modular domain services (e.g., OrderService, InventoryService, PaymentService, ShipmentService, NotificationService) located under `server/modules/`, promoting maintainability and scalability. API routes are thin wrappers around these services.
+- **Robust Order State Machine**: Orders follow a strict state transition model (PENDING→CONFIRMED→PREPARING→READY→SHIPPING→DELIVERED) with a separate CANCELLED path, ensuring accurate order lifecycle management.
+- **Multi-media Support**: Products (Premade Pots) support multiple photos and videos, enhancing product presentation.
+- **Automatic Tagging System**: Premade pots automatically generate tags based on their composition (orchid type, decoration, pot type) for improved search and categorization. Manual tag editing is also available.
+- **Comprehensive Admin Panel**: A dedicated admin dashboard provides full CRUD operations for users, catalog items, orders, customers, technicians, suppliers, and notification channels. It includes inventory management, purchase order tracking, and detailed reports.
+- **AI Chatbot Integration**: Both customer-facing and admin-facing chatbots are integrated using OpenAI via Replit AI Integrations, offering product inquiries and business insights, respectively.
+- **Scalability Enhancements**: The architecture includes database indexing (39 indexes across tables), a dual-layer Redis-backed cache (in-memory + Upstash Redis), API rate limiting, and database connection pooling to handle high concurrency (1000+ users). Response compression (gzip/deflate) is also implemented.
+- **Multi-language Support**: The application supports both Vietnamese and English throughout the UI and content.
+- **Payment Workflow**: Integrated VietQR payment with a 50% deposit option, and a secure payment proof upload feature using Replit Object Storage.
+- **Configurable Tax System**: An admin-managed tax system allows enabling/disabling tax calculation and setting a percentage.
+
+**Key Features:**
+- **Public Shop**: Browse and purchase premade orchid pots, with filtering and sorting options.
+- **Custom Pot Builder**: A multi-step checkout process allowing customers to compose custom orchid arrangements with selectable pot types, decoration types, and orchid compositions.
+- **Order Tracking**: Customers can track their orders using a token, phone number, or email.
+- **User Management**: CRUD for staff accounts with role-based access (ADMIN, MANAGER, EMPLOYEE).
+- **Inventory Management**: Track stock levels for orchids and premade pots, with alerts and adjustment capabilities.
+- **Notification Services**: CRUD for managing various notification channels (Email, SMS, Voicemail, Zalo) and their respective API credentials.
+- **Reporting**: Comprehensive reports cover sales, orders, customers, technicians, and suppliers with charts and data tables.
+- **UI/UX**: Features dropdown sorting, flexible pricing display (fixed or range), bulk inline editing in admin, and video lightbox for product showcases.
+
+## External Dependencies
+- **PostgreSQL**: Primary database for all application data.
+- **Drizzle ORM**: Used for interacting with the PostgreSQL database.
+- **Upstash Redis**: Used for caching, with a graceful fallback to in-memory caching if unavailable.
+- **OpenAI via Replit AI Integrations**: Powers the AI chatbot functionality for both customers and admins.
+- **Plivo**: Integrated for SMS and Voicemail notification services.
+- **Zoho ZeptoMail**: Integrated for email notification services.
+- **Zalo Official Account API**: Integrated for Zalo notification services.
+- **Replit Object Storage**: Used for secure file uploads, specifically for payment proof images and multi-media for premade pots.
+- **VietQR**: Payment integration for processing transactions.
+- **express-session with PostgreSQL store**: For session management.

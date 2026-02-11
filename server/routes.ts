@@ -10,6 +10,10 @@ import { randomUUID } from "crypto";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { getOrCreateConversation, getChatMessages, streamChatResponse, getConversationById } from "./chatbot";
 import { cache, CACHE_KEYS, CACHE_TTL } from "./cache";
+import { OrderService } from "./modules/orders/OrderService";
+import { InventoryService } from "./modules/inventory/InventoryService";
+import { PaymentService } from "./modules/payments/PaymentService";
+import { ShipmentService } from "./modules/logistics/ShipmentService";
 
 function generatePremadePotTags(data: any): string[] {
   const tags: string[] = [];
@@ -561,15 +565,32 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/orders/:id/status", async (req, res) => {
     try {
       const { status } = req.body;
-      const order = await storage.updateOrder(req.params.id, { status });
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
+      const userId = (req.session as any)?.userId;
+      const order = await OrderService.transitionStatus(req.params.id, status, userId);
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       await logActivity(req, "UPDATE", "ORDER", req.params.id, "Order status changed to: " + status, { status });
       res.json(order);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes("Invalid status transition") || error.message.includes("Unknown order status")) {
+        return res.status(400).json({ error: error.message });
+      }
+      if (error.message.includes("not found")) {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to update status" });
+    }
+  });
+
+  app.get("/api/orders/:id/transitions", async (req, res) => {
+    try {
+      const order = await OrderService.getOrderById(req.params.id);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      const allowed = OrderService.getAllowedTransitions(order.status);
+      res.json({ currentStatus: order.status, allowedTransitions: allowed });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get transitions" });
     }
   });
 
@@ -625,6 +646,225 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to cancel order" });
+    }
+  });
+
+  // ==================== PAYMENTS ====================
+  app.get("/api/payments/order/:orderId", async (req, res) => {
+    try {
+      const payments = await PaymentService.getPaymentsByOrderId(req.params.orderId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  });
+
+  app.get("/api/payments/order/:orderId/summary", async (req, res) => {
+    try {
+      const summary = await PaymentService.getOrderPaymentSummary(req.params.orderId);
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payment summary" });
+    }
+  });
+
+  app.post("/api/payments", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userId = (req.session as any).userId;
+      const payment = await PaymentService.createPayment(req.body, userId);
+      await logActivity(req, "CREATE", "PAYMENT", payment.id, "Payment created for order: " + req.body.orderId, { amount: req.body.amount });
+      res.status(201).json(payment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create payment" });
+    }
+  });
+
+  app.patch("/api/payments/:id/verify", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userId = (req.session as any).userId;
+      const payment = await PaymentService.verifyPayment(req.params.id, userId);
+      await logActivity(req, "UPDATE", "PAYMENT", req.params.id, "Payment verified", { amount: payment.amount });
+      res.json(payment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to verify payment" });
+    }
+  });
+
+  app.patch("/api/payments/:id/reject", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const payment = await PaymentService.rejectPayment(req.params.id);
+      await logActivity(req, "UPDATE", "PAYMENT", req.params.id, "Payment rejected");
+      res.json(payment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to reject payment" });
+    }
+  });
+
+  // ==================== INVENTORY ====================
+  app.get("/api/inventory", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const items = await InventoryService.getInventoryItems();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory" });
+    }
+  });
+
+  app.get("/api/inventory/:itemType/:itemId", async (req, res) => {
+    try {
+      const item = await InventoryService.getInventoryForItem(req.params.itemType, req.params.itemId);
+      res.json(item || { stockQuantity: 0 });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory item" });
+    }
+  });
+
+  app.post("/api/inventory/adjust", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { itemType, itemId, quantityChange, reason, entityType, entityId } = req.body;
+      const userId = (req.session as any).userId;
+      const result = await InventoryService.adjustStock(
+        itemType, itemId, quantityChange, reason, entityType, entityId, userId
+      );
+      await logActivity(req, "UPDATE", "INVENTORY", result.inventoryItem.id, 
+        `Inventory adjusted: ${itemType}:${itemId} by ${quantityChange} (${reason})`,
+        { itemType, itemId, quantityChange, reason }
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to adjust inventory" });
+    }
+  });
+
+  app.get("/api/inventory/transactions", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { itemType, itemId } = req.query;
+      const transactions = await InventoryService.getTransactions(
+        itemType as string | undefined,
+        itemId as string | undefined
+      );
+      res.json(transactions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory transactions" });
+    }
+  });
+
+  // ==================== SHIPMENTS ====================
+  app.get("/api/shipments/outbound", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const shipments = await ShipmentService.getOutboundShipments();
+      res.json(shipments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch outbound shipments" });
+    }
+  });
+
+  app.get("/api/shipments/outbound/order/:orderId", async (req, res) => {
+    try {
+      const shipments = await ShipmentService.getOutboundShipmentsByOrderId(req.params.orderId);
+      res.json(shipments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch shipments for order" });
+    }
+  });
+
+  app.post("/api/shipments/outbound", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userId = (req.session as any).userId;
+      const shipment = await ShipmentService.createOutboundShipment(req.body, userId);
+      await logActivity(req, "CREATE", "SHIPMENT", shipment.id, "Outbound shipment created for order: " + req.body.orderId);
+      res.status(201).json(shipment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create shipment" });
+    }
+  });
+
+  app.patch("/api/shipments/outbound/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userId = (req.session as any).userId;
+      const shipment = await ShipmentService.updateOutboundShipment(req.params.id, req.body, userId);
+      if (!shipment) return res.status(404).json({ error: "Shipment not found" });
+      await logActivity(req, "UPDATE", "SHIPMENT", req.params.id, "Outbound shipment updated");
+      res.json(shipment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update shipment" });
+    }
+  });
+
+  app.get("/api/shipments/inbound", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const shipments = await ShipmentService.getInboundShipments();
+      res.json(shipments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inbound shipments" });
+    }
+  });
+
+  app.get("/api/shipments/inbound/purchase-order/:purchaseOrderId", async (req, res) => {
+    try {
+      const shipments = await ShipmentService.getInboundShipmentsByPurchaseOrderId(req.params.purchaseOrderId);
+      res.json(shipments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch shipments for purchase order" });
+    }
+  });
+
+  app.post("/api/shipments/inbound", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userId = (req.session as any).userId;
+      const shipment = await ShipmentService.createInboundShipment(req.body, userId);
+      await logActivity(req, "CREATE", "SHIPMENT", shipment.id, "Inbound shipment created for PO: " + req.body.purchaseOrderId);
+      res.status(201).json(shipment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create shipment" });
+    }
+  });
+
+  app.patch("/api/shipments/inbound/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userId = (req.session as any).userId;
+      const shipment = await ShipmentService.updateInboundShipment(req.params.id, req.body, userId);
+      if (!shipment) return res.status(404).json({ error: "Shipment not found" });
+      await logActivity(req, "UPDATE", "SHIPMENT", req.params.id, "Inbound shipment updated");
+      res.json(shipment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update shipment" });
     }
   });
 

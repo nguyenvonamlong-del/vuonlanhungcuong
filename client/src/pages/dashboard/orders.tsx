@@ -26,6 +26,24 @@ import type { Order, Technician, PriorityType } from "@shared/schema";
 
 const statusOptions = ["PENDING", "CONFIRMED", "PREPARING", "READY", "SHIPPING", "DELIVERED", "CANCELLED"];
 
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ["CONFIRMED"],
+  CONFIRMED: ["PREPARING"],
+  PREPARING: ["READY"],
+  READY: ["SHIPPING"],
+  SHIPPING: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
+
+function getAllowedNextStatuses(currentStatus: string): string[] {
+  return ALLOWED_TRANSITIONS[currentStatus] || [];
+}
+
+function canCancelOrder(currentStatus: string): boolean {
+  return !["DELIVERED", "CANCELLED", "SHIPPING"].includes(currentStatus);
+}
+
 export default function OrdersPage() {
   const { language, user } = useApp();
   const { openChatbot } = useChatbot();
@@ -304,7 +322,7 @@ export default function OrdersPage() {
                                     <Eye className="h-4 w-4 mr-2" />
                                     {t("orders.viewDetails", language)}
                                   </DropdownMenuItem>
-                                  {canUpdateStatus && order.status !== "CANCELLED" && order.status !== "DELIVERED" && (
+                                  {canUpdateStatus && (getAllowedNextStatuses(order.status).length > 0 || canCancelOrder(order.status)) && (
                                     <>
                                       <DropdownMenuItem
                                         onClick={() => {
@@ -356,16 +374,18 @@ export default function OrdersPage() {
                                           ))}
                                         </DropdownMenuSubContent>
                                       </DropdownMenuSub>
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() => {
-                                          setSelectedOrder(order);
-                                          setCancelDialogOpen(true);
-                                        }}
-                                      >
-                                        <XCircle className="h-4 w-4 mr-2" />
-                                        {t("orders.cancel", language)}
-                                      </DropdownMenuItem>
+                                      {canCancelOrder(order.status) && (
+                                        <DropdownMenuItem
+                                          className="text-destructive"
+                                          onClick={() => {
+                                            setSelectedOrder(order);
+                                            setCancelDialogOpen(true);
+                                          }}
+                                        >
+                                          <XCircle className="h-4 w-4 mr-2" />
+                                          {t("orders.cancel", language)}
+                                        </DropdownMenuItem>
+                                      )}
                                     </>
                                   )}
                                 </DropdownMenuContent>
@@ -394,7 +414,7 @@ export default function OrdersPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <StatusBadge status={selectedOrder.status} />
-                {canUpdateStatus && selectedOrder.status !== "CANCELLED" && selectedOrder.status !== "DELIVERED" && (
+                {canUpdateStatus && getAllowedNextStatuses(selectedOrder.status).length > 0 && (
                   <Select
                     value={selectedOrder.status}
                     onValueChange={(status) => updateStatusMutation.mutate({ id: selectedOrder.id, status })}
@@ -403,7 +423,10 @@ export default function OrdersPage() {
                       <SelectValue placeholder={t("orders.updateStatus", language)} />
                     </SelectTrigger>
                     <SelectContent>
-                      {statusOptions.filter((s) => s !== "CANCELLED").map((status) => (
+                      <SelectItem value={selectedOrder.status}>
+                        {t(`status.${selectedOrder.status}`, language)}
+                      </SelectItem>
+                      {getAllowedNextStatuses(selectedOrder.status).map((status) => (
                         <SelectItem key={status} value={status}>
                           {t(`status.${status}`, language)}
                         </SelectItem>

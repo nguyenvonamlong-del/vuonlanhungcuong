@@ -12,12 +12,14 @@ export const users = pgTable("users", {
   email: text("email"),
   role: text("role").notNull().default("EMPLOYEE"), // ADMIN, MANAGER, EMPLOYEE
   status: text("status").notNull().default("ACTIVE"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  updatedBy: true,
 }).extend({
   role: z.enum(["ADMIN", "MANAGER", "EMPLOYEE"]).default("EMPLOYEE"),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
@@ -49,12 +51,16 @@ export const catalogItems = pgTable("catalog_items", {
   tags: text("tags").array(),
   supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertCatalogItemSchema = createInsertSchema(catalogItems).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertCatalogItem = z.infer<typeof insertCatalogItemSchema>;
 export type CatalogItem = typeof catalogItems.$inferSelect;
@@ -72,12 +78,16 @@ export const potTypes = pgTable("pot_types", {
   videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertPotTypeSchema = createInsertSchema(potTypes).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertPotType = z.infer<typeof insertPotTypeSchema>;
 export type PotType = typeof potTypes.$inferSelect;
@@ -95,12 +105,16 @@ export const decorationTypes = pgTable("decoration_types", {
   videos: text("videos").array(),
   supplierId: varchar("supplier_id"),
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertDecorationTypeSchema = createInsertSchema(decorationTypes).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertDecorationType = z.infer<typeof insertDecorationTypeSchema>;
 export type DecorationType = typeof decorationTypes.$inferSelect;
@@ -120,6 +134,8 @@ export const customers = pgTable("customers", {
   totalSpent: decimal("total_spent", { precision: 15, scale: 0 }).notNull().default("0"),
   tags: text("tags").array(),
   isBlocked: boolean("is_blocked").notNull().default(false),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -128,6 +144,8 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
   createdAt: true,
   totalOrders: true,
   totalSpent: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
@@ -143,6 +161,8 @@ export const technicians = pgTable("technicians", {
   currentWorkload: integer("current_workload").notNull().default(0),
   maxWorkload: integer("max_workload").notNull().default(5),
   performanceRating: decimal("performance_rating", { precision: 2, scale: 1 }),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -150,6 +170,8 @@ export const insertTechnicianSchema = createInsertSchema(technicians).omit({
   id: true,
   createdAt: true,
   currentWorkload: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
 export type Technician = typeof technicians.$inferSelect;
@@ -183,6 +205,8 @@ export const orders = pgTable("orders", {
   cancelReason: text("cancel_reason"),
   paymentProofUrl: text("payment_proof_url"),
   taxAmount: decimal("tax_amount", { precision: 15, scale: 0 }),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -214,6 +238,8 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
@@ -266,6 +292,8 @@ export const premadePots = pgTable("premade_pots", {
   careInstructionsEn: text("care_instructions_en"),
   status: text("status").notNull().default("ACTIVE"), // ACTIVE, INACTIVE, OUT_OF_STOCK
   featured: boolean("featured").notNull().default(false),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -274,6 +302,8 @@ export const insertPremadePotSchema = createInsertSchema(premadePots).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertPremadePot = z.infer<typeof insertPremadePotSchema>;
 export type PremadePot = typeof premadePots.$inferSelect;
@@ -289,10 +319,16 @@ export const shippingTypes = pgTable("shipping_types", {
   baseCostMax: decimal("base_cost_max", { precision: 12, scale: 0 }),
   estimatedDays: integer("estimated_days").notNull(),
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertShippingTypeSchema = createInsertSchema(shippingTypes).omit({
   id: true,
+  createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertShippingType = z.infer<typeof insertShippingTypeSchema>;
 export type ShippingType = typeof shippingTypes.$inferSelect;
@@ -302,12 +338,16 @@ export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   key: text("key").notNull().unique(),
   value: text("value").notNull(),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
   updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
@@ -378,12 +418,16 @@ export const paymentTypes = pgTable("payment_types", {
   qrCodeUrl: text("qr_code_url"),
   instructions: text("instructions"),
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertPaymentTypeSchema = createInsertSchema(paymentTypes).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertPaymentType = z.infer<typeof insertPaymentTypeSchema>;
 export type PaymentType = typeof paymentTypes.$inferSelect;
@@ -396,12 +440,16 @@ export const priorityTypes = pgTable("priority_types", {
   level: integer("level").notNull().default(1), // 1=Low, 2=Medium, 3=High, etc.
   color: text("color").notNull().default("#6B7280"), // Hex color for display
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertPriorityTypeSchema = createInsertSchema(priorityTypes).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertPriorityType = z.infer<typeof insertPriorityTypeSchema>;
 export type PriorityType = typeof priorityTypes.$inferSelect;
@@ -417,12 +465,16 @@ export const notificationChannels = pgTable("notification_channels", {
   configJson: jsonb("config_json").$type<Record<string, string>>(),
   isEnabled: boolean("is_enabled").notNull().default(true),
   status: text("status").notNull().default("ACTIVE"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertNotificationChannelSchema = createInsertSchema(notificationChannels).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertNotificationChannel = z.infer<typeof insertNotificationChannelSchema>;
 export type NotificationChannel = typeof notificationChannels.$inferSelect;
@@ -441,6 +493,8 @@ export const suppliers = pgTable("suppliers", {
   status: text("status").notNull().default("ACTIVE"), // ACTIVE, INACTIVE
   totalOrders: integer("total_orders").notNull().default(0),
   totalSpent: decimal("total_spent", { precision: 15, scale: 0 }).notNull().default("0"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -451,6 +505,8 @@ export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   updatedAt: true,
   totalOrders: true,
   totalSpent: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 export type Supplier = typeof suppliers.$inferSelect;
@@ -480,7 +536,8 @@ export const purchaseOrders = pgTable("purchase_orders", {
   notes: text("notes"),
   expectedDelivery: timestamp("expected_delivery"),
   receivedAt: timestamp("received_at"),
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -490,6 +547,8 @@ export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit
   createdAt: true,
   updatedAt: true,
   receivedAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
 export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
@@ -520,6 +579,119 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+// ==================== PAYMENTS ====================
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  amount: decimal("amount", { precision: 15, scale: 0 }).notNull(),
+  paymentTypeId: varchar("payment_type_id"),
+  status: text("status").notNull().default("PENDING"), // PENDING, VERIFIED, REJECTED
+  proofUrl: text("proof_url"),
+  paidAt: timestamp("paid_at"),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
+// ==================== INVENTORY ITEMS ====================
+export const inventoryItems = pgTable("inventory_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  itemType: text("item_type").notNull(), // ORCHID, PREMADE_POT
+  itemId: varchar("item_id").notNull(), // references catalogItems.id or premadePots.id
+  stockQuantity: integer("stock_quantity").notNull().default(0),
+  minQuantity: integer("min_quantity").notNull().default(0),
+  maxQuantity: integer("max_quantity"),
+  location: text("location"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+
+// ==================== INVENTORY TRANSACTIONS ====================
+export const inventoryTransactions = pgTable("inventory_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  itemType: text("item_type").notNull(), // ORCHID, PREMADE_POT
+  itemId: varchar("item_id").notNull(),
+  quantityChange: integer("quantity_change").notNull(),
+  reason: text("reason").notNull(), // SALE, PURCHASE, ADJUSTMENT, RETURN, DAMAGE
+  entityType: text("entity_type"), // ORDER, PURCHASE_ORDER
+  entityId: varchar("entity_id"),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertInventoryTransactionSchema = createInsertSchema(inventoryTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransactionSchema>;
+export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
+
+// ==================== OUTBOUND SHIPMENTS ====================
+export const outboundShipments = pgTable("outbound_shipments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  status: text("status").notNull().default("PENDING"), // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+  carrier: text("carrier"),
+  trackingNumber: text("tracking_number"),
+  expectedDelivery: timestamp("expected_delivery"),
+  actualDelivery: timestamp("actual_delivery"),
+  notes: text("notes"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOutboundShipmentSchema = createInsertSchema(outboundShipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  actualDelivery: true,
+});
+export type InsertOutboundShipment = z.infer<typeof insertOutboundShipmentSchema>;
+export type OutboundShipment = typeof outboundShipments.$inferSelect;
+
+// ==================== INBOUND SHIPMENTS ====================
+export const inboundShipments = pgTable("inbound_shipments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purchaseOrderId: varchar("purchase_order_id").notNull().references(() => purchaseOrders.id),
+  status: text("status").notNull().default("PENDING"), // PENDING, PICKED_UP, IN_TRANSIT, RECEIVED, FAILED
+  carrier: text("carrier"),
+  trackingNumber: text("tracking_number"),
+  expectedDelivery: timestamp("expected_delivery"),
+  actualDelivery: timestamp("actual_delivery"),
+  notes: text("notes"),
+  createdBy: varchar("created_by"),
+  updatedBy: varchar("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInboundShipmentSchema = createInsertSchema(inboundShipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  actualDelivery: true,
+});
+export type InsertInboundShipment = z.infer<typeof insertInboundShipmentSchema>;
+export type InboundShipment = typeof inboundShipments.$inferSelect;
 
 // ==================== VALIDATION SCHEMAS ====================
 export const loginSchema = z.object({
