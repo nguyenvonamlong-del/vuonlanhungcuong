@@ -68,6 +68,7 @@ export type CatalogItem = typeof catalogItems.$inferSelect;
 // ==================== POT TYPES ====================
 export const potTypes = pgTable("pot_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sku: text("sku").unique(),
   nameVi: text("name_vi").notNull(),
   nameEn: text("name_en").notNull(),
   descriptionVi: text("description_vi"),
@@ -95,6 +96,7 @@ export type PotType = typeof potTypes.$inferSelect;
 // ==================== DECORATION TYPES ====================
 export const decorationTypes = pgTable("decoration_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sku: text("sku").unique(),
   nameVi: text("name_vi").notNull(),
   nameEn: text("name_en").notNull(),
   descriptionVi: text("description_vi"),
@@ -263,6 +265,7 @@ export interface PremadeDecorationItem {
 
 export const premadePots = pgTable("premade_pots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sku: text("sku").unique(),
   nameVi: text("name_vi").notNull(),
   nameEn: text("name_en").notNull(),
   descriptionVi: text("description_vi"),

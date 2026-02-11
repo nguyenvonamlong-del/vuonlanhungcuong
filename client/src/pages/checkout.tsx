@@ -936,19 +936,13 @@ export default function CheckoutPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
-                    <span className="text-sm">{t("checkout.trackingToken", language)}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-semibold">{orderResult.trackingToken}</span>
-                      <Button variant="ghost" size="icon" onClick={() => handleCopy(orderResult.trackingToken, "tracking")} data-testid="button-copy-tracking-token">
-                        {copied === "tracking" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {language === "vi" ? "Sử dụng mã đơn hàng để theo dõi đơn hàng của bạn" : "Use your order number to track your order"}
+                  </p>
                 </CardContent>
               </Card>
 
-              <Button onClick={() => navigate(`/tracking?token=${orderResult.trackingToken}`)} data-testid="button-track-order">
+              <Button onClick={() => navigate(`/tracking?order=${orderResult.orderNumber}`)} data-testid="button-track-order">
                 {t("nav.trackOrder", language)}
               </Button>
             </div>

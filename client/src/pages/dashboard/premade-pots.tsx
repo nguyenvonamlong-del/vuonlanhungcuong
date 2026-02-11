@@ -52,6 +52,7 @@ export default function PremadePotsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PremadePot | null>(null);
+  const [skuLocked, setSkuLocked] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<PremadePot | null>(null);
@@ -345,9 +346,15 @@ export default function PremadePotsPage() {
 
   const openEdit = (pot: PremadePot) => {
     setEditingItem(pot);
+    setSkuLocked(false);
+    fetch(`/api/sku-lock/premade-pot/${pot.id}`, { credentials: "include" })
+      .then(r => r.json())
+      .then(d => setSkuLocked(d.locked || false))
+      .catch(() => setSkuLocked(false));
     setFormData({
       nameVi: pot.nameVi,
       nameEn: pot.nameEn,
+      sku: (pot as any).sku || "",
       descriptionVi: pot.descriptionVi || "",
       descriptionEn: pot.descriptionEn || "",
       price: String(pot.price),
@@ -679,6 +686,7 @@ export default function PremadePotsPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
+                          <TableHead>SKU</TableHead>
                           <TableHead>{language === "vi" ? "Loại chậu" : "Pot Type"}</TableHead>
                           <TableHead>{language === "vi" ? "Trang trí" : "Decoration"}</TableHead>
                           <TableHead>{language === "vi" ? "Nhãn" : "Tags"}</TableHead>
@@ -710,6 +718,9 @@ export default function PremadePotsPage() {
                                   {language === "vi" ? pot.nameVi : pot.nameEn}
                                 </span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs" data-testid={`text-sku-premade-${pot.id}`}>{(pot as any).sku || "-"}</span>
                             </TableCell>
                             <TableCell>
                               {pot.potTypeName || pot.potTypeId ? (
@@ -835,6 +846,29 @@ export default function PremadePotsPage() {
                   data-testid="input-nameEn"
                 />
               </div>
+            </div>
+            <div>
+              <Label className="flex items-center gap-2">
+                {language === "vi" ? "Mã SKU" : "SKU Code"}
+                {editingItem && skuLocked && (
+                  <Badge variant="secondary" className="text-xs">
+                    {language === "vi" ? "Đã khóa" : "Locked"}
+                  </Badge>
+                )}
+              </Label>
+              <Input
+                value={(formData as any).sku || ""}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() } as any)}
+                placeholder="PM-OR-WH-M"
+                className="font-mono"
+                disabled={editingItem && skuLocked}
+                data-testid="input-sku-premade"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {editingItem && skuLocked
+                  ? (language === "vi" ? "SKU không thể thay đổi - đã được sử dụng trong đơn hàng" : "SKU cannot be changed - referenced by orders")
+                  : (language === "vi" ? "Để trống để tự động tạo" : "Leave empty to auto-generate")}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

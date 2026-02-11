@@ -52,6 +52,7 @@ const initialOrchidForm: InsertCatalogItem = {
 interface GenericFormData {
   nameVi: string;
   nameEn: string;
+  sku?: string;
   descriptionVi?: string;
   descriptionEn?: string;
   price?: string;
@@ -74,6 +75,7 @@ interface GenericFormData {
 const initialGenericForm: GenericFormData = {
   nameVi: "",
   nameEn: "",
+  sku: "",
   descriptionVi: "",
   descriptionEn: "",
   price: "0",
@@ -113,6 +115,7 @@ export default function CatalogPage() {
   const [deletingGeneric, setDeletingGeneric] = useState<any | null>(null);
   const [genericDialogType, setGenericDialogType] = useState<CatalogTab>("pot");
 
+  const [skuLocked, setSkuLocked] = useState(false);
   const [orchidVideos, setOrchidVideos] = useState<string[]>([]);
   const [genericVideos, setGenericVideos] = useState<string[]>([]);
   const [isUploadingOrchidVideo, setIsUploadingOrchidVideo] = useState(false);
@@ -370,6 +373,7 @@ export default function CatalogPage() {
     setGenericForm({
       nameVi: item.nameVi || "",
       nameEn: item.nameEn || "",
+      sku: item.sku || "",
       descriptionVi: item.descriptionVi || "",
       descriptionEn: item.descriptionEn || "",
       price: String(item.price || item.baseCost || "0"),
@@ -389,6 +393,14 @@ export default function CatalogPage() {
       color: item.color || "#808080",
     });
     setGenericVideos(item.videos || []);
+    setSkuLocked(false);
+    if (type === "pot" || type === "decoration") {
+      const skuType = type === "pot" ? "pot-type" : "decoration-type";
+      fetch(`/api/sku-lock/${skuType}/${item.id}`, { credentials: "include" })
+        .then(r => r.json())
+        .then(d => setSkuLocked(d.locked || false))
+        .catch(() => setSkuLocked(false));
+    }
     setGenericDialogOpen(true);
   };
 
@@ -400,6 +412,7 @@ export default function CatalogPage() {
       data = {
         nameVi: genericForm.nameVi,
         nameEn: genericForm.nameEn,
+        sku: genericForm.sku,
         descriptionVi: genericForm.descriptionVi,
         descriptionEn: genericForm.descriptionEn,
         price: genericForm.price,
@@ -674,6 +687,9 @@ export default function CatalogPage() {
                       <TableHead className="w-16">{language === "vi" ? "Ảnh" : "Image"}</TableHead>
                     )}
                     <TableHead>{language === "vi" ? "Tên" : "Name"}</TableHead>
+                    {(type === "pot" || type === "decoration") && (
+                      <TableHead>SKU</TableHead>
+                    )}
                     <TableHead>{language === "vi" ? "Mô tả" : "Description"}</TableHead>
                     {(type === "pot" || type === "decoration") && (
                       <TableHead className="text-right">{t("catalog.price", language)}</TableHead>
@@ -708,6 +724,9 @@ export default function CatalogPage() {
                       <TableCell className="font-medium">
                         {language === "vi" ? item.nameVi : item.nameEn}
                       </TableCell>
+                      {(type === "pot" || type === "decoration") && (
+                        <TableCell><span className="font-mono text-xs" data-testid={`text-sku-${item.id}`}>{item.sku || "-"}</span></TableCell>
+                      )}
                       <TableCell className="max-w-xs truncate">
                         {language === "vi" ? item.descriptionVi : item.descriptionEn}
                       </TableCell>
@@ -1133,6 +1152,32 @@ export default function CatalogPage() {
                 />
               </div>
             </div>
+
+            {(genericDialogType === "pot" || genericDialogType === "decoration") && (
+              <div>
+                <Label className="flex items-center gap-2">
+                  {language === "vi" ? "Mã SKU" : "SKU Code"}
+                  {editingGeneric && skuLocked && (
+                    <Badge variant="secondary" className="text-xs">
+                      {language === "vi" ? "Đã khóa" : "Locked"}
+                    </Badge>
+                  )}
+                </Label>
+                <Input
+                  value={genericForm.sku || ""}
+                  onChange={(e) => setGenericForm({ ...genericForm, sku: e.target.value.toUpperCase() })}
+                  placeholder="PT-BT-WH-M"
+                  className="font-mono"
+                  disabled={editingGeneric && skuLocked}
+                  data-testid="input-sku"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {editingGeneric && skuLocked
+                    ? (language === "vi" ? "SKU không thể thay đổi - đã được sử dụng trong đơn hàng" : "SKU cannot be changed - referenced by orders")
+                    : (language === "vi" ? "Để trống để tự động tạo" : "Leave empty to auto-generate")}
+                </p>
+              </div>
+            )}
 
             {(genericDialogType === "pot" || genericDialogType === "decoration") && (
               <>

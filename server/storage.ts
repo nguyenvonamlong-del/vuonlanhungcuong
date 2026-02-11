@@ -119,6 +119,7 @@ export interface IStorage {
   getOrders(): Promise<Order[]>;
   getOrderById(id: string): Promise<Order | undefined>;
   getOrderByTrackingToken(token: string): Promise<Order | undefined>;
+  getOrderByOrderNumber(orderNumber: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: string, order: Partial<InsertOrder>): Promise<Order | undefined>;
   
@@ -393,6 +394,11 @@ export class DatabaseStorage implements IStorage {
 
   async getOrderByTrackingToken(token: string): Promise<Order | undefined> {
     const [order] = await db.select().from(orders).where(eq(orders.trackingToken, token));
+    return order;
+  }
+
+  async getOrderByOrderNumber(orderNumber: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
     return order;
   }
 

@@ -27,6 +27,7 @@ type InventoryTab = "orchids" | "premade" | "pots" | "decorations" | "general" |
 interface InventoryItem {
   id: string;
   name: string;
+  sku?: string | null;
   type: "orchid" | "premade" | "pot" | "decoration";
   stock: number;
   minStock: number;
@@ -128,6 +129,7 @@ export default function InventoryPage() {
   const premadeInventory: InventoryItem[] = premadePots.map((pot) => ({
     id: pot.id,
     name: language === "vi" ? pot.nameVi : pot.nameEn,
+    sku: (pot as any).sku,
     type: "premade" as const,
     stock: inventoryStockMap.get(`PREMADE_POT:${pot.id}`) ?? pot.stockQuantity,
     minStock: inventoryMinMap.get(`PREMADE_POT:${pot.id}`) ?? 1,
@@ -140,6 +142,7 @@ export default function InventoryPage() {
   const potsInventory: InventoryItem[] = potTypes.map((pot) => ({
     id: pot.id,
     name: language === "vi" ? pot.nameVi : pot.nameEn,
+    sku: (pot as any).sku,
     type: "pot" as const,
     stock: 0, // Pot types don't have stock tracking by default
     minStock: 0,
@@ -152,6 +155,7 @@ export default function InventoryPage() {
   const decorationsInventory: InventoryItem[] = decorationTypes.map((dec) => ({
     id: dec.id,
     name: language === "vi" ? dec.nameVi : dec.nameEn,
+    sku: (dec as any).sku,
     type: "decoration" as const,
     stock: 0, // Decoration types don't have stock tracking by default
     minStock: 0,
@@ -276,6 +280,9 @@ export default function InventoryPage() {
                         )}
                         <div>
                           <p className="font-medium">{item.name}</p>
+                          {item.sku && (
+                            <span className="font-mono text-xs text-muted-foreground" data-testid={`text-sku-inv-${item.id}`}>{item.sku}</span>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             {item.type === "orchid" ? (language === "vi" ? "Loại lan" : "Orchid") : 
                              item.type === "premade" ? (language === "vi" ? "Chậu sẵn" : "Premade") :

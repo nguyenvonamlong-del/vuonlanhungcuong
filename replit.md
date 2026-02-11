@@ -26,7 +26,8 @@ The application is built with a modern web stack, utilizing **React + TypeScript
 **Key Features:**
 - **Public Shop**: Browse and purchase premade orchid pots, with filtering and sorting options.
 - **Custom Pot Builder**: A multi-step checkout process allowing customers to compose custom orchid arrangements with selectable pot types, decoration types, and orchid compositions.
-- **Order Tracking**: Customers can track their orders using a token, phone number, or email.
+- **Order Tracking**: Customers can track their orders using order number or phone number/email.
+- **SKU System**: Pot types, decoration types, premade pots, and orchid types all have unique SKU codes. SKUs are auto-generated from Vietnamese names using deterministic token mapping (material, color, size). SKUs become read-only once referenced by orders/purchase orders. SKU generator utility at `server/utils/sku-generator.ts`.
 - **User Management**: CRUD for staff accounts with role-based access (ADMIN, MANAGER, EMPLOYEE).
 - **Inventory Management**: Track stock levels for orchids and premade pots, with alerts and adjustment capabilities.
 - **Notification Services**: CRUD for managing various notification channels (Email, SMS, Voicemail, Zalo) and their respective API credentials.

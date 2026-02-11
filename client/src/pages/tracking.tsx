@@ -55,22 +55,22 @@ export default function TrackingPage() {
   const { language } = useApp();
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const tokenFromUrl = params.get("token") || "";
+  const orderFromUrl = params.get("order") || params.get("token") || "";
 
-  const [searchMode, setSearchMode] = useState<"token" | "contact">(tokenFromUrl ? "token" : "token");
-  const [trackingToken, setTrackingToken] = useState(tokenFromUrl);
-  const [searchToken, setSearchToken] = useState(tokenFromUrl);
+  const [searchMode, setSearchMode] = useState<"token" | "contact">(orderFromUrl ? "token" : "token");
+  const [orderNumberInput, setOrderNumberInput] = useState(orderFromUrl);
+  const [searchToken, setSearchToken] = useState(orderFromUrl);
   const [contactSearch, setContactSearch] = useState("");
   const [searchContact, setSearchContact] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
-    if (tokenFromUrl) {
-      setTrackingToken(tokenFromUrl);
-      setSearchToken(tokenFromUrl);
+    if (orderFromUrl) {
+      setOrderNumberInput(orderFromUrl);
+      setSearchToken(orderFromUrl);
       setSearchMode("token");
     }
-  }, [tokenFromUrl]);
+  }, [orderFromUrl]);
 
   const { data: order, isLoading, error } = useQuery<Order>({
     queryKey: [`/api/orders/track/${searchToken}`],
@@ -83,8 +83,8 @@ export default function TrackingPage() {
   });
 
   const handleSearch = () => {
-    if (trackingToken.trim()) {
-      setSearchToken(trackingToken.trim());
+    if (orderNumberInput.trim()) {
+      setSearchToken(orderNumberInput.trim());
       setSelectedOrder(null);
     }
   };
@@ -130,8 +130,8 @@ export default function TrackingPage() {
             <h1 className="text-3xl font-bold mb-2">{t("tracking.title", language)}</h1>
             <p className="text-muted-foreground">
               {language === "vi"
-                ? "Tra cứu đơn hàng bằng mã theo dõi hoặc số điện thoại/email"
-                : "Track your order by tracking code or phone/email"}
+                ? "Tra cứu đơn hàng bằng mã đơn hàng hoặc số điện thoại/email"
+                : "Track your order by order number or phone/email"}
             </p>
           </div>
 
@@ -141,7 +141,7 @@ export default function TrackingPage() {
                 <TabsList className="grid w-full grid-cols-2 mb-4">
                   <TabsTrigger value="token" data-testid="tab-tracking-token">
                     <Package className="h-4 w-4 mr-2" />
-                    {language === "vi" ? "Mã theo dõi" : "Tracking Code"}
+                    {language === "vi" ? "Mã đơn hàng" : "Order Number"}
                   </TabsTrigger>
                   <TabsTrigger value="contact" data-testid="tab-contact">
                     <Phone className="h-4 w-4 mr-2" />
@@ -152,12 +152,12 @@ export default function TrackingPage() {
                 <TabsContent value="token" className="mt-0">
                   <div className="flex gap-2">
                     <Input
-                      placeholder={t("tracking.enterCode", language)}
-                      value={trackingToken}
-                      onChange={(e) => setTrackingToken(e.target.value)}
+                      placeholder={language === "vi" ? "Nhập mã đơn hàng (VD: ORD...)" : "Enter order number (e.g. ORD...)"}
+                      value={orderNumberInput}
+                      onChange={(e) => setOrderNumberInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                       className="flex-1"
-                      data-testid="input-tracking-code"
+                      data-testid="input-order-number"
                     />
                     <Button onClick={handleSearch} data-testid="button-track">
                       <Search className="h-4 w-4 mr-2" />
@@ -205,8 +205,8 @@ export default function TrackingPage() {
                 <h3 className="text-xl font-semibold mb-2">{t("tracking.notFound", language)}</h3>
                 <p className="text-muted-foreground">
                   {language === "vi"
-                    ? "Không tìm thấy đơn hàng với mã theo dõi này"
-                    : "No order found with this tracking code"}
+                    ? "Không tìm thấy đơn hàng với mã đơn hàng này"
+                    : "No order found with this order number"}
                 </p>
               </CardContent>
             </Card>

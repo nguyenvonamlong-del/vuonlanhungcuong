@@ -14,6 +14,7 @@ import { OrderService } from "./modules/orders/OrderService";
 import { InventoryService } from "./modules/inventory/InventoryService";
 import { PaymentService } from "./modules/payments/PaymentService";
 import { ShipmentService } from "./modules/logistics/ShipmentService";
+import { generatePotTypeSku, generateDecorationTypeSku, generatePremadePotSku, ensureUniqueSku } from "./utils/sku-generator";
 
 function generatePremadePotTags(data: any): string[] {
   const tags: string[] = [];
@@ -37,6 +38,55 @@ function generatePremadePotTags(data: any): string[] {
     tags.push(`pot:${data.potTypeId}`);
   }
   return tags;
+}
+
+async function isItemSkuLocked(itemType: "POT_TYPE" | "DECORATION_TYPE" | "PREMADE_POT", itemId: string): Promise<boolean> {
+  if (itemType === "POT_TYPE") {
+    const orderRef = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM orders, jsonb_array_elements(pots) AS p WHERE p->>'potTypeId' = $1) AS referenced`,
+      [itemId]
+    );
+    if (orderRef.rows[0]?.referenced) return true;
+    const poRef = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM purchase_orders, jsonb_array_elements(items) AS i WHERE i->>'itemId' = $1 AND i->>'itemType' = 'POT') AS referenced`,
+      [itemId]
+    );
+    return poRef.rows[0]?.referenced || false;
+  }
+  if (itemType === "DECORATION_TYPE") {
+    const orderRef = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM orders, jsonb_array_elements(pots) AS p WHERE p->>'decorationTypeId' = $1) AS referenced`,
+      [itemId]
+    );
+    if (orderRef.rows[0]?.referenced) return true;
+    const poRef = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM purchase_orders, jsonb_array_elements(items) AS i WHERE i->>'itemId' = $1 AND i->>'itemType' = 'DECORATION') AS referenced`,
+      [itemId]
+    );
+    return poRef.rows[0]?.referenced || false;
+  }
+  if (itemType === "PREMADE_POT") {
+    const orderRef = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM orders, jsonb_array_elements(pots) AS p WHERE p->>'potId' = $1) AS referenced`,
+      [itemId]
+    );
+    if (orderRef.rows[0]?.referenced) return true;
+    const poRef = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM purchase_orders, jsonb_array_elements(items) AS i WHERE i->>'itemId' = $1) AS referenced`,
+      [itemId]
+    );
+    return poRef.rows[0]?.referenced || false;
+  }
+  return false;
+}
+
+async function checkSkuExists(table: string, sku: string, excludeId?: string): Promise<boolean> {
+  const query = excludeId
+    ? `SELECT EXISTS(SELECT 1 FROM ${table} WHERE sku = $1 AND id != $2) AS exists`
+    : `SELECT EXISTS(SELECT 1 FROM ${table} WHERE sku = $1) AS exists`;
+  const params = excludeId ? [sku, excludeId] : [sku];
+  const result = await pool.query(query, params);
+  return result.rows[0]?.exists || false;
 }
 
 // Schema for public order creation with required payment proof
@@ -321,6 +371,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!data.tags || data.tags.length === 0) {
         data.tags = generatePremadePotTags(data);
       }
+      if (!data.sku && data.nameVi) {
+        const baseSku = generatePremadePotSku(data.nameVi, data.potTypeName || undefined);
+        data.sku = await ensureUniqueSku(baseSku, (s) => checkSkuExists("premade_pots", s));
+      }
       const pot = await storage.createPremadePot(data);
       cache.invalidate(CACHE_KEYS.ALL_POTS);
       cache.invalidate(CACHE_KEYS.ACTIVE_POTS);
@@ -333,9 +387,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/premade-pots/:id", async (req, res) => {
     try {
-      const body = req.body;
+      const body = { ...req.body };
       if (body.orchidComposition || body.decorations || body.potTypeId || body.orchidTypes) {
         body.tags = generatePremadePotTags(body);
+      }
+      if (body.sku !== undefined) {
+        const existing = await pool.query("SELECT sku FROM premade_pots WHERE id = $1", [req.params.id]);
+        const currentSku = existing.rows[0]?.sku;
+        if (body.sku !== currentSku) {
+          const locked = await isItemSkuLocked("PREMADE_POT", req.params.id);
+          if (locked) {
+            return res.status(400).json({ error: "SKU cannot be changed - item is referenced by orders or purchase orders" });
+          }
+        }
       }
       const pot = await storage.updatePremadePot(req.params.id, body);
       if (!pot) {
@@ -457,7 +521,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/orders/track/:token", async (req, res) => {
     try {
-      const order = await OrderService.getOrderByTrackingToken(req.params.token);
+      const token = req.params.token;
+      let order = await OrderService.getOrderByOrderNumber(token);
+      if (!order) {
+        order = await OrderService.getOrderByTrackingToken(token);
+      }
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
@@ -1155,7 +1223,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const created = await storage.createPotType(req.body);
+      const data = { ...req.body };
+      if (!data.sku && data.nameVi) {
+        const baseSku = generatePotTypeSku(data.nameVi);
+        data.sku = await ensureUniqueSku(baseSku, (s) => checkSkuExists("pot_types", s));
+      }
+      const created = await storage.createPotType(data);
       cache.invalidate(CACHE_KEYS.POT_TYPES);
       await logActivity(req, "CREATE", "POT_TYPE", created.id, "Created pot type: " + (created as any).nameVi);
       res.status(201).json(created);
@@ -1169,7 +1242,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const updated = await storage.updatePotType(req.params.id, req.body);
+      const data = { ...req.body };
+      const existing = await pool.query("SELECT sku FROM pot_types WHERE id = $1", [req.params.id]);
+      const currentSku = existing.rows[0]?.sku;
+      if (data.sku && data.sku !== currentSku) {
+        const locked = await isItemSkuLocked("POT_TYPE", req.params.id);
+        if (locked) {
+          return res.status(400).json({ error: "SKU cannot be changed - item is referenced by orders or purchase orders" });
+        }
+      }
+      const updated = await storage.updatePotType(req.params.id, data);
       if (!updated) return res.status(404).json({ error: "Not found" });
       cache.invalidate(CACHE_KEYS.POT_TYPES);
       await logActivity(req, "UPDATE", "POT_TYPE", req.params.id, "Updated pot type: " + req.params.id);
@@ -1200,7 +1282,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const created = await storage.createDecorationType(req.body);
+      const data = { ...req.body };
+      if (!data.sku && data.nameVi) {
+        const baseSku = generateDecorationTypeSku(data.nameVi);
+        data.sku = await ensureUniqueSku(baseSku, (s) => checkSkuExists("decoration_types", s));
+      }
+      const created = await storage.createDecorationType(data);
       cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
       await logActivity(req, "CREATE", "DECORATION_TYPE", created.id, "Created decoration type: " + (created as any).nameVi);
       res.status(201).json(created);
@@ -1214,7 +1301,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const updated = await storage.updateDecorationType(req.params.id, req.body);
+      const data = { ...req.body };
+      const existing = await pool.query("SELECT sku FROM decoration_types WHERE id = $1", [req.params.id]);
+      const currentSku = existing.rows[0]?.sku;
+      if (data.sku && data.sku !== currentSku) {
+        const locked = await isItemSkuLocked("DECORATION_TYPE", req.params.id);
+        if (locked) {
+          return res.status(400).json({ error: "SKU cannot be changed - item is referenced by orders or purchase orders" });
+        }
+      }
+      const updated = await storage.updateDecorationType(req.params.id, data);
       if (!updated) return res.status(404).json({ error: "Not found" });
       cache.invalidate(CACHE_KEYS.DECORATION_TYPES);
       await logActivity(req, "UPDATE", "DECORATION_TYPE", req.params.id, "Updated decoration type: " + req.params.id);
@@ -1235,6 +1331,56 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete decoration type" });
+    }
+  });
+
+  app.get("/api/sku-lock/:type/:id", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const typeMap: Record<string, "POT_TYPE" | "DECORATION_TYPE" | "PREMADE_POT"> = {
+        "pot-type": "POT_TYPE",
+        "decoration-type": "DECORATION_TYPE",
+        "premade-pot": "PREMADE_POT",
+      };
+      const itemType = typeMap[req.params.type];
+      if (!itemType) return res.status(400).json({ error: "Invalid type" });
+      const locked = await isItemSkuLocked(itemType, req.params.id);
+      res.json({ locked });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check SKU lock" });
+    }
+  });
+
+  app.post("/api/generate-sku", async (req, res) => {
+    try {
+      if (!(req.session as any)?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { type, nameVi, potTypeName } = req.body;
+      let baseSku: string;
+      let tableName: string;
+      switch (type) {
+        case "pot-type":
+          baseSku = generatePotTypeSku(nameVi);
+          tableName = "pot_types";
+          break;
+        case "decoration-type":
+          baseSku = generateDecorationTypeSku(nameVi);
+          tableName = "decoration_types";
+          break;
+        case "premade-pot":
+          baseSku = generatePremadePotSku(nameVi, potTypeName);
+          tableName = "premade_pots";
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid type" });
+      }
+      const sku = await ensureUniqueSku(baseSku, (s) => checkSkuExists(tableName, s));
+      res.json({ sku });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate SKU" });
     }
   });
 

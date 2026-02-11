@@ -584,7 +584,12 @@ export default function PurchaseOrdersPage() {
                     <TableBody>
                       {selectedOrder.items.map((item, index) => (
                         <TableRow key={index}>
-                          <TableCell>{item.itemName}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {item.sku && <span className="font-mono text-xs text-muted-foreground" data-testid={`text-sku-po-${index}`}>[{item.sku}]</span>}
+                              <span data-testid={`text-itemname-${index}`}>{item.itemName}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">{item.quantity}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.unitPrice, language)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.subtotal, language)}</TableCell>

@@ -215,6 +215,10 @@ export class OrderService {
     return storage.getOrderByTrackingToken(token);
   }
 
+  static async getOrderByOrderNumber(orderNumber: string): Promise<Order | undefined> {
+    return storage.getOrderByOrderNumber(orderNumber);
+  }
+
   static async createOrder(orderData: InsertOrder, createdBy?: string): Promise<Order> {
     const data = { ...orderData };
     if (createdBy) {
