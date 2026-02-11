@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, sql, and, gte, lte, or, ilike, count, sum } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, or, ilike, count, sum, inArray } from "drizzle-orm";
 import {
   users,
   catalogItems,
@@ -397,14 +397,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveOrdersByPhoneOrEmail(phoneOrEmail: string): Promise<Order[]> {
-    const activeStatuses = ["PENDING", "CONFIRMED", "PREPARING", "READY", "SHIPPING"];
+    const activeStatuses = ["PENDING", "CONFIRMED", "PREPARING", "READY", "SHIPPING"] as const;
     return db.select().from(orders)
       .where(and(
         or(
           eq(orders.customerPhone, phoneOrEmail),
           eq(orders.customerEmail, phoneOrEmail)
         ),
-        sql`${orders.status} = ANY(${activeStatuses})`
+        inArray(orders.status, [...activeStatuses])
       ))
       .orderBy(desc(orders.createdAt));
   }
