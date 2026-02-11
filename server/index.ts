@@ -98,6 +98,14 @@ app.use((req, res, next) => {
 
 (async () => {
   await syncCatalogItems();
+
+  const { InventoryService } = await import("./modules/inventory/InventoryService");
+  await InventoryService.syncFromCatalog().then(() => {
+    console.log("[sync] Inventory items synced from catalog");
+  }).catch((err) => {
+    console.error("[sync] Failed to sync inventory items:", err);
+  });
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

@@ -98,6 +98,19 @@ export default function TrackingPage() {
 
   const displayOrder = searchMode === "token" ? order : selectedOrder;
 
+  const { data: trackingPaymentSummary } = useQuery<{
+    depositPaid: boolean;
+    remainingPaid: boolean;
+  }>({
+    queryKey: ["/api/payments/order", displayOrder?.id, "summary"],
+    queryFn: async () => {
+      if (!displayOrder?.id) return null;
+      const res = await fetch(`/api/payments/order/${displayOrder.id}/summary`);
+      return res.json();
+    },
+    enabled: !!displayOrder?.id,
+  });
+
   const getCurrentStatusIndex = () => {
     if (!displayOrder) return -1;
     return statusOrder.indexOf(displayOrder.status);
@@ -420,7 +433,7 @@ export default function TrackingPage() {
                         <p className="text-sm text-muted-foreground mb-1">{t("checkout.deposit", language)}</p>
                         <div className="flex items-center justify-between">
                           <span className="font-semibold">{formatCurrency(displayOrder.depositAmount, language)}</span>
-                          {displayOrder.depositPaid ? (
+                          {(trackingPaymentSummary?.depositPaid ?? displayOrder.depositPaid) ? (
                             <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
                               {language === "vi" ? "Đã thanh toán" : "Paid"}
                             </span>
@@ -435,7 +448,7 @@ export default function TrackingPage() {
                         <p className="text-sm text-muted-foreground mb-1">{t("checkout.remaining", language)}</p>
                         <div className="flex items-center justify-between">
                           <span className="font-semibold">{formatCurrency(displayOrder.remainingAmount, language)}</span>
-                          {displayOrder.remainingPaid ? (
+                          {(trackingPaymentSummary?.remainingPaid ?? displayOrder.remainingPaid) ? (
                             <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
                               {language === "vi" ? "Đã thanh toán" : "Paid"}
                             </span>

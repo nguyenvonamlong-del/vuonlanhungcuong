@@ -111,6 +111,26 @@ export default function OrdersPage() {
     },
   });
 
+  const { data: paymentSummary } = useQuery<{
+    payments: any[];
+    totalPaid: number;
+    totalPending: number;
+    hasPendingPayments: boolean;
+    depositPaid: boolean;
+    remainingPaid: boolean;
+    orderTotal: number;
+    depositAmount: number;
+    remainingAmount: number;
+  }>({
+    queryKey: ["/api/payments/order", selectedOrder?.id, "summary"],
+    queryFn: async () => {
+      if (!selectedOrder?.id) return null;
+      const res = await fetch(`/api/payments/order/${selectedOrder.id}/summary`);
+      return res.json();
+    },
+    enabled: !!selectedOrder?.id,
+  });
+
   const markPaymentMutation = useMutation({
     mutationFn: async ({ id, type }: { id: string; type: "deposit" | "remaining" }) => {
       const response = await apiRequest("PATCH", `/api/orders/${id}/payment`, { type });
@@ -118,6 +138,7 @@ export default function OrdersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/order"] });
       toast({
         title: t("common.success", language),
         description: language === "vi" ? "Đã xác nhận thanh toán" : "Payment confirmed",
@@ -480,7 +501,7 @@ export default function OrdersPage() {
                   <p className="text-muted-foreground mb-1">{t("checkout.deposit", language)}</p>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{formatCurrency(selectedOrder.depositAmount, language)}</span>
-                    {selectedOrder.depositPaid ? (
+                    {(paymentSummary?.depositPaid ?? selectedOrder.depositPaid) ? (
                       <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
                         {language === "vi" ? "Đã thanh toán" : "Paid"}
                       </span>
@@ -495,7 +516,7 @@ export default function OrdersPage() {
                   <p className="text-muted-foreground mb-1">{t("checkout.remaining", language)}</p>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{formatCurrency(selectedOrder.remainingAmount, language)}</span>
-                    {selectedOrder.remainingPaid ? (
+                    {(paymentSummary?.remainingPaid ?? selectedOrder.remainingPaid) ? (
                       <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600">
                         {language === "vi" ? "Đã thanh toán" : "Paid"}
                       </span>

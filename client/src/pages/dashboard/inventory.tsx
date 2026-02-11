@@ -20,7 +20,7 @@ import { useChatbot } from "@/context/ChatbotContext";
 import { t, formatCurrency } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CatalogItem, PremadePot, PotType, DecorationType } from "@shared/schema";
+import type { CatalogItem, PremadePot, PotType, DecorationType, InventoryItem as DbInventoryItem } from "@shared/schema";
 
 type InventoryTab = "orchids" | "premade" | "pots" | "decorations" | "general" | "alerts";
 
@@ -66,13 +66,33 @@ export default function InventoryPage() {
     queryKey: ["/api/decoration-types"],
   });
 
+  const { data: dbInventoryItems = [] } = useQuery<DbInventoryItem[]>({
+    queryKey: ["/api/inventory"],
+  });
+
+  const inventoryStockMap = new Map<string, number>();
+  const inventoryMinMap = new Map<string, number>();
+  const inventoryMaxMap = new Map<string, number>();
+  dbInventoryItems.forEach((inv) => {
+    const key = `${inv.itemType}:${inv.itemId}`;
+    inventoryStockMap.set(key, inv.stockQuantity);
+    inventoryMinMap.set(key, inv.minQuantity);
+    if (inv.maxQuantity != null) inventoryMaxMap.set(key, inv.maxQuantity);
+  });
+
   const updateStockMutation = useMutation({
-    mutationFn: async ({ type, id, stock }: { type: "orchid" | "premade"; id: string; stock: number }) => {
-      const endpoint = type === "orchid" ? `/api/catalog/${id}` : `/api/premade-pots/${id}`;
-      const response = await apiRequest("PATCH", endpoint, { stockQuantity: stock });
+    mutationFn: async ({ type, id, quantityChange, reason }: { type: "orchid" | "premade"; id: string; quantityChange: number; reason: string }) => {
+      const itemType = type === "orchid" ? "ORCHID" : "PREMADE_POT";
+      const response = await apiRequest("POST", "/api/inventory/adjust", {
+        itemType,
+        itemId: id,
+        quantityChange,
+        reason: reason || "ADJUSTMENT",
+      });
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
       queryClient.invalidateQueries({ queryKey: ["/api/premade-pots"] });
       setAdjustDialogOpen(false);
@@ -97,9 +117,9 @@ export default function InventoryPage() {
     id: item.id,
     name: language === "vi" ? item.speciesNameVi : item.speciesNameEn,
     type: "orchid" as const,
-    stock: item.stockQuantity,
-    minStock: item.minOrderQuantity || 5,
-    maxStock: 500,
+    stock: inventoryStockMap.get(`ORCHID:${item.id}`) ?? item.stockQuantity,
+    minStock: inventoryMinMap.get(`ORCHID:${item.id}`) ?? (item.minOrderQuantity || 5),
+    maxStock: inventoryMaxMap.get(`ORCHID:${item.id}`) ?? 500,
     price: item.pricePerUnit,
     status: item.status,
     imageUrl: item.imageUrl,
@@ -109,9 +129,9 @@ export default function InventoryPage() {
     id: pot.id,
     name: language === "vi" ? pot.nameVi : pot.nameEn,
     type: "premade" as const,
-    stock: pot.stockQuantity,
-    minStock: 1,
-    maxStock: 100,
+    stock: inventoryStockMap.get(`PREMADE_POT:${pot.id}`) ?? pot.stockQuantity,
+    minStock: inventoryMinMap.get(`PREMADE_POT:${pot.id}`) ?? 1,
+    maxStock: inventoryMaxMap.get(`PREMADE_POT:${pot.id}`) ?? 100,
     price: pot.price,
     status: pot.status,
     imageUrl: pot.images?.[0],
@@ -194,13 +214,13 @@ export default function InventoryPage() {
 
   const handleAdjustStock = () => {
     if (!adjustingItem) return;
-    // Guard against non-adjustable types
     if (adjustingItem.type !== "orchid" && adjustingItem.type !== "premade") return;
-    const newStock = Math.max(0, adjustingItem.stock + adjustmentAmount);
+    if (adjustmentAmount === 0) return;
     updateStockMutation.mutate({
       type: adjustingItem.type as "orchid" | "premade",
       id: adjustingItem.id,
-      stock: newStock,
+      quantityChange: adjustmentAmount,
+      reason: adjustmentReason || "ADJUSTMENT",
     });
   };
 

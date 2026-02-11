@@ -448,7 +448,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Orders routes
   app.get("/api/orders", async (req, res) => {
     try {
-      const allOrders = await storage.getOrders();
+      const allOrders = await OrderService.getOrders();
       res.json(allOrders);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch orders" });
@@ -457,7 +457,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/orders/track/:token", async (req, res) => {
     try {
-      const order = await storage.getOrderByTrackingToken(req.params.token);
+      const order = await OrderService.getOrderByTrackingToken(req.params.token);
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
@@ -467,7 +467,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // Track active orders by phone or email
   app.get("/api/orders/search", async (req, res) => {
     try {
       const { q } = req.query;
@@ -483,78 +482,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/orders", async (req, res) => {
     try {
-      // Validate request body with Zod schema
       const parseResult = publicOrderSchema.safeParse(req.body);
       if (!parseResult.success) {
         const firstError = parseResult.error.errors[0];
         return res.status(400).json({ error: firstError.message });
       }
       
-      const { customerName, customerPhone, customerEmail, province, district, ward, streetAddress, pots, subtotal, shippingCost, paymentProofUrl, orderType } = parseResult.data;
-      
-      // Fetch tax settings and recalculate tax server-side to prevent tampering
-      const taxEnabledSetting = await storage.getSetting("tax_enabled");
-      const taxPercentageSetting = await storage.getSetting("tax_percentage");
-      const isTaxEnabled = taxEnabledSetting?.value === "true";
-      const taxPercentage = parseFloat(taxPercentageSetting?.value || "0");
-      
-      // Recalculate tax and total on server side (using validated values from Zod)
-      const serverTaxAmount = isTaxEnabled ? Math.ceil((subtotal + shippingCost) * taxPercentage / 100) : 0;
-      const serverTotal = subtotal + shippingCost + serverTaxAmount;
-      const serverDeposit = Math.ceil(serverTotal / 2);
-      const serverRemaining = serverTotal - serverDeposit;
-      
-      // Find or create customer
-      let customer = await storage.getCustomerByPhone(customerPhone);
-      if (!customer) {
-        customer = await storage.createCustomer({
-          fullName: customerName,
-          phoneNumber: customerPhone,
-          email: customerEmail,
-          province,
-          district,
-          ward,
-          streetAddress,
-          customerType: "GUEST",
-          totalOrders: 0,
-          totalSpent: "0",
-        });
-      }
-      
-      const order = await storage.createOrder({
-        customerId: customer.id,
-        customerName,
-        customerPhone,
-        customerEmail: customerEmail || undefined,
-        province,
-        district: district || "",
-        ward,
-        streetAddress,
-        pots,
-        subtotal: String(subtotal),
-        shippingCost: String(shippingCost),
-        taxAmount: String(serverTaxAmount),
-        totalAmount: String(serverTotal),
-        depositAmount: String(serverDeposit),
-        remainingAmount: String(serverRemaining),
-        paymentProofUrl,
-        orderType,
-        status: "PENDING",
-        depositPaid: !!paymentProofUrl,
-        remainingPaid: false,
-      });
-      
-      // Update customer stats (use server-computed total to prevent tampering)
-      await storage.updateCustomer(customer.id, {
-        totalOrders: customer.totalOrders + 1,
-        totalSpent: String(Number(customer.totalSpent) + serverTotal),
-      });
+      const result = await OrderService.createOrderFromPublicInput(parseResult.data);
       
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
-      await logActivity(req, "CREATE", "ORDER", order.id, "New order #" + order.orderNumber + " placed by " + customerName, { total: serverTotal, pots: pots.length });
+      await logActivity(req, "CREATE", "ORDER", result.order.id, "New order #" + result.orderNumber + " placed by " + parseResult.data.customerName, { total: result.order.totalAmount, pots: parseResult.data.pots.length });
       res.status(201).json({
-        orderNumber: order.orderNumber,
-        trackingToken: order.trackingToken,
+        orderNumber: result.orderNumber,
+        trackingToken: result.trackingToken,
       });
     } catch (error: any) {
       console.error("Create order error:", error);
@@ -597,23 +537,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/orders/:id/assign", async (req, res) => {
     try {
       const { technicianId } = req.body;
-      const order = await storage.updateOrder(req.params.id, { technicianId });
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
-      
-      // Update technician workload
-      const tech = await storage.getTechnicianById(technicianId);
-      if (tech) {
-        await storage.updateTechnician(technicianId, {
-          currentWorkload: tech.currentWorkload + 1,
-        });
-      }
-      
+      const userId = (req.session as any)?.userId;
+      const order = await OrderService.assignTechnician(req.params.id, technicianId, userId);
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       await logActivity(req, "UPDATE", "ORDER", req.params.id, "Technician assigned to order", { technicianId });
       res.json(order);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes("not found")) {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to assign technician" });
     }
   });
@@ -621,30 +553,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/orders/:id/payment", async (req, res) => {
     try {
       const { type } = req.body;
-      const update = type === "deposit" ? { depositPaid: true, status: "CONFIRMED" } : { remainingPaid: true };
-      const order = await storage.updateOrder(req.params.id, update as any);
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
+      const userId = (req.session as any)?.userId;
+      let payment;
+      if (type === "deposit") {
+        payment = await PaymentService.markDepositPaid(req.params.id, userId);
+      } else {
+        payment = await PaymentService.markRemainingPaid(req.params.id, userId);
       }
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
-      await logActivity(req, "UPDATE", "ORDER", req.params.id, "Payment updated: " + type, { type });
-      res.json(order);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update payment" });
+      await logActivity(req, "UPDATE", "PAYMENT", payment.id, "Payment recorded: " + type + " for order " + req.params.id, { type });
+      const summary = await PaymentService.getOrderPaymentSummary(req.params.id);
+      res.json({ ...summary, paymentId: payment.id });
+    } catch (error: any) {
+      if (error.message.includes("not found")) {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(400).json({ error: error.message || "Failed to update payment" });
     }
   });
 
   app.patch("/api/orders/:id/cancel", async (req, res) => {
     try {
       const { reason } = req.body;
-      const order = await storage.updateOrder(req.params.id, { status: "CANCELLED", cancelReason: reason });
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
+      const userId = (req.session as any)?.userId;
+      const order = await OrderService.cancelOrder(req.params.id, reason, userId);
       cache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
       await logActivity(req, "UPDATE", "ORDER", req.params.id, "Order cancelled", { reason });
       res.json(order);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes("Invalid status transition")) {
+        return res.status(400).json({ error: error.message });
+      }
+      if (error.message.includes("not found")) {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to cancel order" });
     }
   });
@@ -701,7 +643,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!(req.session as any)?.userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const payment = await PaymentService.rejectPayment(req.params.id);
+      const userId = (req.session as any).userId;
+      const payment = await PaymentService.rejectPayment(req.params.id, userId);
       await logActivity(req, "UPDATE", "PAYMENT", req.params.id, "Payment rejected");
       res.json(payment);
     } catch (error: any) {
