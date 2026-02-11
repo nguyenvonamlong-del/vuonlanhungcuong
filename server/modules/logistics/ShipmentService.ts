@@ -1,6 +1,5 @@
 import { storage } from "../../storage";
 import { db } from "../../db";
-import { pool } from "../../db";
 import { outboundShipments, inboundShipments, orders } from "@shared/schema";
 import { eq, and, lt, isNull, inArray, sql } from "drizzle-orm";
 import type {
@@ -165,7 +164,7 @@ export class ShipmentService {
     outbound: { total: number; pending: number; inTransit: number; delivered: number; delayed: number; failed: number };
     inbound: { total: number; pending: number; inTransit: number; received: number; delayed: number; failed: number };
   }> {
-    const outboundResult = await pool.query(`
+    const outboundResult = await db.execute(sql`
       SELECT
         count(*)::int as total,
         count(CASE WHEN status = 'PENDING' THEN 1 END)::int as pending,
@@ -176,7 +175,7 @@ export class ShipmentService {
       FROM outbound_shipments
     `);
 
-    const inboundResult = await pool.query(`
+    const inboundResult = await db.execute(sql`
       SELECT
         count(*)::int as total,
         count(CASE WHEN status = 'PENDING' THEN 1 END)::int as pending,
