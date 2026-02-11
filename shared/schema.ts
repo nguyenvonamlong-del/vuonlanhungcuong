@@ -250,9 +250,10 @@ export type Order = typeof orders.$inferSelect;
 // Orchid composition for premade pots
 export interface PremadeOrchidItem {
   catalogItemId?: string;
-  speciesNameVi: string;
-  speciesNameEn: string;
-  color: string;
+  speciesName?: string;
+  speciesNameVi?: string;
+  speciesNameEn?: string;
+  color?: string;
   quantity: number;
 }
 

@@ -413,6 +413,7 @@ export default function ShopPage() {
     if (pot.orchidComposition && pot.orchidComposition.length > 0) {
       pot.orchidComposition.forEach(orchid => {
         const name = getCatalogName(orchid.catalogItemId) ||
+          orchid.speciesName ||
           (language === "vi" ? orchid.speciesNameVi : orchid.speciesNameEn);
         if (name) parts.push(`${name} x${orchid.quantity}`);
       });
@@ -575,8 +576,7 @@ export default function ShopPage() {
                           className="w-full h-full object-cover"
                           muted
                           playsInline
-                          loop
-                          autoPlay
+                          preload="metadata"
                           data-testid={`video-thumbnail-${pot.id}`}
                         />
                       ) : pot.images?.[0] ? (
@@ -695,6 +695,7 @@ export default function ShopPage() {
                         <div className="mt-1.5 space-y-1.5">
                           {selectedPot.orchidComposition.map((orchid, idx) => {
                             const resolvedName = getCatalogName(orchid.catalogItemId) ||
+                              orchid.speciesName ||
                               (language === "vi" ? orchid.speciesNameVi : orchid.speciesNameEn);
                             const unitPrice = getOrchidPrice(orchid.catalogItemId);
                             return (
